@@ -1,0 +1,13 @@
+{
+  "name": "venezuela-dao",
+  "private": true,
+  "workspaces": [
+    "src/cmd/*",
+    "src/internal/*"
+  ],
+  "scripts": {
+    "start:telegram": "cd cmd/telegram-bot && npm start",
+    "dev:telegram": "cd cmd/telegram-bot && npm run dev",
+    "build:telegram": "cd cmd/telegram-bot && npm run build"
+  }
+}
