@@ -1,9 +1,21 @@
 import { ENV } from './src/config/env';
-import { TelegramBot } from './src/bot';
+import { TelegramBot , registerCommands} from './src/bot';
 import { createServer } from './src/server';
+import { connectDB } from './src/config/database';
+import { initializeFlow } from './src/wallet';
+import mongoose from 'mongoose';
 
 async function bootstrap() {
   try {
+    // Conectar a MongoDB
+    await connectDB();
+    console.log('📦 MongoDB conectado exitosamente');
+
+    // Inicializar Flow
+    initializeFlow();
+    console.log('🌊 Flow inicializado');
+
+    // Iniciar bot de Telegram
     const telegramBot = new TelegramBot(ENV.BOT_TOKEN);
 
     if (ENV.NODE_ENV === 'development') {
@@ -19,11 +31,19 @@ async function bootstrap() {
       });
     }
 
-    process.once('SIGINT', () => telegramBot.stop('SIGINT'));
-    process.once('SIGTERM', () => telegramBot.stop('SIGTERM'));
+    // Manejadores de cierre
+    const gracefulShutdown = async (signal: string) => {
+      console.log(`\n${signal} recibido. Cerrando servicios...`);
+      await telegramBot.stop(signal);
+      await mongoose.connection.close();
+      process.exit(0);
+    };
+
+    process.once('SIGINT', () => gracefulShutdown('SIGINT'));
+    process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
   } catch (error) {
-    console.error('Failed to start bot:', error);
+    console.error('Failed to start services:', error);
     process.exit(1);
   }
 }

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { TelegramBot } from '../../../bot';
+import { TelegramBot } from '../../../bot/bot';
 
 export const handleWebhook = (bot: TelegramBot) => 
   async (req: Request, res: Response) => {

@@ -1,5 +1,5 @@
 import express from 'express';
-import { TelegramBot } from './bot';
+import { TelegramBot } from './bot/bot';
 import { createRoutes } from './api/routes';
 import { errorHandler } from './api/middlewares/error';
 

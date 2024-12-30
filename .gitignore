@@ -6,6 +6,10 @@
 
 # Node
 node_modules/
+dist/
 
 # Railway
 railway.json
+
+# Flow
+flow.json
