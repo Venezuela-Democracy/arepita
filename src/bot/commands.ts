@@ -1,10 +1,38 @@
 import { Telegraf } from 'telegraf';
 import { BotContext } from './types';
 import { BOT_COMMANDS, MESSAGES } from './constants';
+import { User } from '../models';
+import { FlowWallet } from '../wallet';
+
+const flowWallet = new FlowWallet();
 
 export const registerCommands = (bot: Telegraf<BotContext>) => {
   bot.command(BOT_COMMANDS.START, async (ctx) => {
-    await ctx.reply(MESSAGES.WELCOME);
+    const telegramId = ctx.from?.id.toString();
+    let user = await User.findOne({ telegramId });
+    if (!user) {
+      // Crear nueva wallet
+      const wallet = await flowWallet.createWallet();
+      
+      // Guardar usuario
+      user = await User.create({
+        telegramId,
+        wallet: {
+          address: wallet.address,
+          privateKey: wallet.privateKey
+        }
+      });
+    }
+
+    await ctx.reply(
+      `¡Bienvenido a VenezuelaDAO!\n` +
+      `Tu wallet de Flow: ${user.wallet.address}`
+    );
+
+    await ctx.reply(
+      "Tu private key es: " + user.wallet.privateKey + "\n" +
+      "Guardala en un lugar seguro y no compartas con nadie."
+    )
   });
 
   bot.command(BOT_COMMANDS.HELP, async (ctx) => {
