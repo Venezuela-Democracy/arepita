@@ -64,12 +64,12 @@ telegram-check-vars:
 		echo "$(GREEN)✅ Todas las variables están configuradas$(RESET)"; \
 	fi
 # Comandos de uso diario
-telegram-deploy:
+telegram-deploy: telegram-setup-env
 	@echo "$(BLUE)🚀 Desplegando bot a Railway...$(RESET)"
 	@$(RAILWAY) up -d
 	@echo "$(GREEN)✅ Bot desplegado correctamente$(RESET)"
 
-telegram-set-webhook:
+telegram-set-webhook: telegram-setup-domain
 	@echo "$(BLUE)🔗 Configurando webhook del bot...$(RESET)"
 	@vars=$$($(RAILWAY) variables --json); \
 	webhook_domain=$$(echo "$$vars" | jq -r '.WEBHOOK_DOMAIN'); \
