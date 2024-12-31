@@ -1,15 +1,14 @@
 import * as fcl from "@onflow/fcl";
-import * as t from "@onflow/types";
 import { ec as EC } from "elliptic";
 import { SHA3 } from "sha3";
 import { flowConfig } from './config';
-import { WalletResponse, TransactionResult } from "./types";
+import { WalletResponse} from "./types";
 
 export class FlowWallet {
   private ec: EC;
   private serviceAccount: typeof flowConfig.serviceAccount;
   private INITIAL_FUNDING = "5";
-  
+
   constructor() {
     this.ec = new EC('p256');
     this.serviceAccount = flowConfig.serviceAccount;
