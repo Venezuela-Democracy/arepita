@@ -99,6 +99,9 @@ Te notificaré cuando pueda ser revelado.`,
       }
     }
 
+    console.log('Esperando 10 segundos adicionales para asegurar disponibilidad del receipt...');
+    await new Promise(resolve => setTimeout(resolve, 25000));
+
     await ctx.reply(`
 🎉 *¡Revelando pack!*
 
