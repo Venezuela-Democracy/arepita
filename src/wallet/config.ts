@@ -30,7 +30,10 @@ export const flowConfig: FlowConfig = {
     address: ENV.FLOW_SERVICE_ADDRESS,
     privateKey: ENV.FLOW_SERVICE_PRIVATE_KEY,
     keyIndex: ENV.FLOW_SERVICE_KEY_INDEX || 0
-  }
+  },
+  venezuelaNFTAddress: ENV.FLOW_NETWORK === 'testnet'
+    ? "0x826dae42290107c3"
+    : "0x826dae42290107c3"
 } as const;
 
 export const initializeFlow = async () => {

@@ -1,8 +1,8 @@
 import { model } from 'mongoose';
-import userSchema, { IUser } from './user';
+import userSchema, { IUser, IUserModel } from './user';
 
-export const User = model<IUser>('User', userSchema);
-export type { IUser };
+export const User = model<IUser, IUserModel>('User', userSchema);
+export type { IUser, IUserModel };
 
 export const Models = {
   User

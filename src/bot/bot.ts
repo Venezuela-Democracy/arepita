@@ -1,4 +1,4 @@
-import { Telegraf } from 'telegraf';
+import { Telegraf, session } from 'telegraf'; // Añadir importación de session
 import { BotContext, CommandValue } from './types';
 import { registerCommands } from './commands';
 import { BOT_COMMANDS, ERROR_MESSAGES } from './constants';
@@ -10,6 +10,9 @@ export class TelegramBot {
   constructor(token: string) {
     this.bot = new Telegraf<BotContext>(token);
     
+    // Configurar middleware de sesión
+    this.bot.use(session());
+
     // Registrar comandos
     try {
       registerCommands(this.bot);
@@ -101,8 +104,11 @@ export class TelegramBot {
     try {
       await this.bot.telegram.setMyCommands([
         { command: BOT_COMMANDS.START, description: 'Iniciar bot' },
+        { command: BOT_COMMANDS.REGISTER, description: 'Registrarse en VenezuelaDAO' },
         { command: BOT_COMMANDS.HELP, description: 'Ver ayuda' },
         { command: BOT_COMMANDS.STATUS, description: 'Ver estado del bot' },
+        { command: BOT_COMMANDS.BALANCE, description: 'Ver tu balance de FLOW' },
+        { command: BOT_COMMANDS.WALLET, description: 'Ver información de tu wallet' },
       ]);
       console.log('✅ Bot commands menu updated');
     } catch (error) {

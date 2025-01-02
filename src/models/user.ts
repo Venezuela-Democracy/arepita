@@ -1,8 +1,10 @@
-import mongoose, { Document } from 'mongoose';
+import mongoose, { Document, Model } from 'mongoose';
+import { VENEZUELA_REGIONS } from '../bot/regions';
 
 // Interface para TypeScript
 export interface IUser extends Document {
   telegramId: string;
+  region: keyof typeof VENEZUELA_REGIONS;
   wallet: {
     address: string;
     privateKey: string;
@@ -12,13 +14,35 @@ export interface IUser extends Document {
   createdAt: Date;
 }
 
+interface IUserModel extends Model<IUser> {
+  findByTelegramId(telegramId: string): Promise<IUser | null>;
+  createUser(userData: {
+    telegramId: string;
+    region: string;
+    wallet: {
+      address: string;
+      privateKey: string;
+    };
+  }): Promise<IUser>;
+}
+
 // Schema
 const userSchema = new mongoose.Schema({
   telegramId: {
     type: String,
     required: true,
     unique: true,
-    index: true // Para búsquedas más rápidas
+    index: true
+  },
+  region: {
+    type: String,
+    required: true,
+    validate: {
+      validator: function(v: string) {
+        return Object.keys(VENEZUELA_REGIONS).includes(v);
+      },
+      message: (props: { value: string }) => `${props.value} no es una región válida de Venezuela`
+    }
   },
   wallet: {
     address: {
@@ -27,7 +51,7 @@ const userSchema = new mongoose.Schema({
     },
     privateKey: {
       type: String,
-      select: false // Por seguridad, no se incluye en consultas normales
+      select: false
     },
     createdAt: {
       type: Date,
@@ -44,4 +68,27 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+userSchema.statics.findByTelegramId = function(telegramId: string) {
+  return this.findOne({ telegramId });
+};
+
+userSchema.statics.createUser = function(userData: {
+  telegramId: string;
+  region: string;
+  wallet: {
+    address: string;
+    privateKey: string;
+  };
+}) {
+  return this.create({
+    telegramId: userData.telegramId,
+    region: userData.region,
+    wallet: {
+      address: userData.wallet.address,
+      privateKey: userData.wallet.privateKey,
+    }
+  });
+};
+
 export default userSchema;
+export { IUserModel };

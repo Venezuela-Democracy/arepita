@@ -2,12 +2,12 @@ import * as fcl from "@onflow/fcl";
 import { ec as EC } from "elliptic";
 import { SHA3 } from "sha3";
 import { flowConfig } from './config';
-import { WalletResponse} from "./types";
+import { FlowAuthorization, WalletResponse} from "./types";
 
 export class FlowWallet {
   private ec: EC;
   private serviceAccount: typeof flowConfig.serviceAccount;
-  private INITIAL_FUNDING = "5";
+  private INITIAL_FUNDING = "5.0";
 
   constructor() {
     this.ec = new EC('p256');
@@ -179,20 +179,24 @@ export class FlowWallet {
         cadence: `
           import FungibleToken from ${flowConfig.fungibleToken}
           import FlowToken from ${flowConfig.flowToken}
-
-          pub fun main(address: Address): UFix64 {
+  
+          access(all) 
+          fun main(address: Address): UFix64 {
             let account = getAccount(address)
-            let vaultRef = account
-              .getCapability(/public/flowTokenBalance)
-              .borrow<&FlowToken.Vault{FungibleToken.Balance}>()
-              ?? panic("Could not borrow Balance reference")
-
+            
+            let vaultRef = account.capabilities
+              .get<&{FungibleToken.Balance}>(
+                /public/flowTokenBalance
+              )
+              .borrow()
+              ?? panic("Could not borrow a balance reference to the account's Flow Token Vault")
+  
             return vaultRef.balance
           }
         `,
         args: (arg: any, t: any) => [arg(address, t.Address)]
       });
-
+  
       return balance;
     } catch (error) {
       console.error('Error getting balance:', error);
@@ -259,4 +263,64 @@ export class FlowWallet {
       throw error;
     }
   }
+
+  async buyPack(userAddress: string, privateKey: string): Promise<string> {
+    try {
+      const authorization = await this.getAuthorization();
+  
+      const transactionId = await fcl.mutate({
+        cadence: `
+          import VenezuelaNFT_5 from ${flowConfig.venezuelaNFTAddress}
+          import NonFungibleToken from "NonFungibleToken"
+          import MetadataViews from "MetadataViews"
+  
+          transaction(setID: UInt32) {
+              prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue, UnpublishCapability) &Account) {
+                  let collectionData = VenezuelaNFT_5.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
+                      ?? panic("ViewResolver does not resolve NFTCollectionData view")
+  
+                  // Return early if the account already has a collection
+                  if signer.storage.borrow<&VenezuelaNFT_5.Collection>(from: collectionData.storagePath) != nil {
+                      return
+                  }
+                  // Create a new empty collection
+                  let collection <- VenezuelaNFT_5.createEmptyCollection(nftType: Type<@VenezuelaNFT_5.NFT>())
+  
+                  // save it to the account
+                  signer.storage.save(<-collection, to: collectionData.storagePath)
+  
+                  // the old "unlink"
+                  let oldLink = signer.capabilities.unpublish(collectionData.publicPath)
+                  // create a public capability for the collection
+                  let collectionCap = signer.capabilities.storage.issue<&VenezuelaNFT_5.Collection>(collectionData.storagePath)
+                  signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
+                  // Commit my bet and get a receipt
+                  let receipt <- VenezuelaNFT_5.buyPack(setID: setID)
+                  
+                  // Check that I don't already have a receipt stored
+                  if signer.storage.type(at: VenezuelaNFT_5.ReceiptStoragePath) != nil {
+                      panic("Storage collision at path=".concat(VenezuelaNFT_5.ReceiptStoragePath.toString()).concat(" a Receipt is already stored!"))
+                  }
+  
+                  // Save that receipt to my storage
+                  signer.storage.save(<-receipt, to: VenezuelaNFT_5.ReceiptStoragePath)
+              }
+          }
+        `,
+        args: (arg: any, t: any) => [
+          arg(0, t.UInt32) // Usando setID 0
+        ],
+        payer: authorization,
+        proposer: authorization,
+        authorizations: [authorization],
+        limit: 999
+      });
+  
+      return transactionId;
+    } catch (error) {
+      console.error('Error buying pack:', error);
+      throw new Error('Failed to buy pack');
+    }
+  }
+
 }

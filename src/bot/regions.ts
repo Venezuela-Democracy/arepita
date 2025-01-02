@@ -1,0 +1,56 @@
+export const VENEZUELA_REGIONS = {
+    AMAZONAS: 'Amazonas',
+    ANZOATEGUI: 'Anzoategui',
+    APURE: 'Apure',
+    ARAGUA: 'Aragua',
+    BARINAS: 'Barinas',
+    BOLIVAR: 'Bolivar',
+    CARABOBO: 'Carabobo',
+    COJEDES: 'Cojedes',
+    DELTA_AMACURO: 'Delta Amacuro',
+    DISTRITO_CAPITAL: 'Distrito Capital',
+    FALCON: 'Falcon',
+    GUARICO: 'Guarico',
+    LARA: 'Lara',
+    MERIDA: 'Merida',
+    MIRANDA: 'Miranda',
+    MONAGAS: 'Monagas',
+    NUEVA_ESPARTA: 'Nueva Esparta',
+    PORTUGUESA: 'Portuguesa',
+    SUCRE: 'Sucre',
+    TACHIRA: 'Tachira',
+    TRUJILLO: 'Trujillo',
+    LA_GUAIRA: 'La Guaira',
+    YARACUY: 'Yaracuy',
+    ZULIA: 'Zulia'
+  } as const;
+  
+  // Para mostrar en mensajes (con acentos)
+  export const VENEZUELA_REGIONS_DISPLAY = {
+    AMAZONAS: 'Amazonas',
+    ANZOATEGUI: 'Anzoátegui',
+    APURE: 'Apure',
+    ARAGUA: 'Aragua',
+    BARINAS: 'Barinas',
+    BOLIVAR: 'Bolívar',
+    CARABOBO: 'Carabobo',
+    COJEDES: 'Cojedes',
+    DELTA_AMACURO: 'Delta Amacuro',
+    DISTRITO_CAPITAL: 'Distrito Capital',
+    FALCON: 'Falcón',
+    GUARICO: 'Guárico',
+    LARA: 'Lara',
+    MERIDA: 'Mérida',
+    MIRANDA: 'Miranda',
+    MONAGAS: 'Monagas',
+    NUEVA_ESPARTA: 'Nueva Esparta',
+    PORTUGUESA: 'Portuguesa',
+    SUCRE: 'Sucre',
+    TACHIRA: 'Táchira',
+    TRUJILLO: 'Trujillo',
+    LA_GUAIRA: 'La Guaira',
+    YARACUY: 'Yaracuy',
+    ZULIA: 'Zulia'
+  } as const;
+  
+  export type VenezuelaRegion = keyof typeof VENEZUELA_REGIONS;
