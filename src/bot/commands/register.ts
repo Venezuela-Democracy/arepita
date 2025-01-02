@@ -45,8 +45,14 @@ export const registerHandler = async (ctx: BotContext) => {
     };
 
     await ctx.reply(
-      '🗺 *Bienvenido a VenezuelaDAO*\n\n' +
-      'Por favor, selecciona tu región de Venezuela:',
+        `🗺 *¡Bienvenido al registro de VenezuelaDAO!*
+
+        🔸 *Proceso de registro:*
+          1️⃣ Seleccionar tu región
+          2️⃣ Crear tu wallet de Flow
+          3️⃣ ¡Listo para comprar NFTs!
+        
+        Por favor, selecciona tu región de Venezuela:`,
       {
         parse_mode: 'Markdown',
         ...getRegionsKeyboard()

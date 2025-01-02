@@ -17,6 +17,8 @@ export interface FlowConfig {
   flowToken: string;
   serviceAccount: ServiceAccount;
   venezuelaNFTAddress: string;
+  nonFungibleToken: string;
+  metadataViews: string;
 }
 
 export type TransactionStatus = 'pending' | 'success' | 'error';

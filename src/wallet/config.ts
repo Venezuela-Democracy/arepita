@@ -33,7 +33,13 @@ export const flowConfig: FlowConfig = {
   },
   venezuelaNFTAddress: ENV.FLOW_NETWORK === 'testnet'
     ? "0x826dae42290107c3"
-    : "0x826dae42290107c3"
+    : "0x826dae42290107c3",
+  nonFungibleToken: ENV.FLOW_NETWORK === 'testnet'
+    ? "0x631e88ae7f1d7c20"
+    : "0x631e88ae7f1d7c20",
+  metadataViews: ENV.FLOW_NETWORK === 'testnet'
+    ? "0x631e88ae7f1d7c20"
+    : "0x631e88ae7f1d7c20"
 } as const;
 
 export const initializeFlow = async () => {

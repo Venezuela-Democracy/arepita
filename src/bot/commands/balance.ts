@@ -21,7 +21,13 @@ export const balanceHandler = async (ctx: BotContext) => {
     }
 
     const balance = await flowWallet.getBalance(address);
-    await ctx.reply(`💰 Tu balance: ${balance} FLOW`);
+    await ctx.reply(`
+        💰 *Balance de tu Wallet*
+        
+        ${balance} FLOW
+        
+        💡 _Necesitas FLOW para comprar packs de NFTs_`, 
+            { parse_mode: 'Markdown' });
     
     await UserService.updateLastActive(telegramId);
   } catch (error) {

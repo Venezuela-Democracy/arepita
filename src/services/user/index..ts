@@ -135,4 +135,14 @@ export class UserService {
         throw error;
       }
     }
+
+    static async getRegion(telegramId: string): Promise<VenezuelaRegion | null> {
+      try {
+        const user = await User.findByTelegramId(telegramId);
+        return user?.region || null;
+      } catch (error) {
+        console.error('Error getting user region:', error);
+        throw error;
+      }
+    }
 }
