@@ -129,16 +129,8 @@ Te notificaré cuando pueda ser revelado.`,
         const nftID = revealEvent.data.cardID;
         const { cardType, metadata } = await wallet.getNFTMetadata(nftID);
         
-        // Array de gateways IPFS para fallback
-        const ipfsGateways = [
-          `https://ipfs.io/ipfs/${metadata.ipfsCID}`,
-          `https://gateway.pinata.cloud/ipfs/${metadata.ipfsCID}`,
-          `https://cloudflare-ipfs.com/ipfs/${metadata.ipfsCID}`,
-          `https://ipfs.infura.io/ipfs/${metadata.ipfsCID}`
-        ];
-        
         let message = `🎉 *¡NUEVA CARTA!*\n\n`;
-        message += `[⚜️](${ipfsGateways[0]}) *${metadata.name}* #${metadata.serial}\n`;
+        message += `[⚜️](${metadata.image}) *${metadata.name}* #${metadata.serial}\n`;
         message += `━━━━━━━━━━━━━━━\n\n`;
       
         switch (cardType) {
@@ -146,18 +138,9 @@ Te notificaré cuando pueda ser revelado.`,
             message += `📍 *UBICACIÓN*\n`;
             message += `🌎 Región: ${metadata.region}\n`;
             message += `━━━━ ESTADÍSTICAS ━━━━\n`;
-            message += `⚡ Poder de Influencia: ${metadata.generation}/día\n`;
+            message += `⚡ Poder de Influencia: ${metadata.influencePointsGeneration}/día\n`;
             message += `🏗️ Desarrollo Regional: ${metadata.regionalGeneration}/día\n`;
-            message += `🎯 Especialidad: ${metadata.type}\n\n`;
-            
-            if (metadata.availableProposals && metadata.availableProposals.length > 0) {
-              message += `📜 *PROPUESTAS*\n`;
-              metadata.availableProposals.forEach((proposal: any) => {
-                message += `• ${proposal.proposalName}\n`;
-                message += `  └ Efecto: +${proposal.effect}% (${proposal.duration})\n`;
-                message += `  └ Req: ${proposal.adoptionRequirement}%\n`;
-              });
-            }
+            message += `🎯 Especialidad: ${metadata.type}\n`;
             break;
       
           case 'A.826dae42290107c3.VenezuelaNFT_13.CharacterCard':
@@ -170,20 +153,12 @@ Te notificaré cuando pueda ser revelado.`,
             if (metadata.presidentEffects) {
               message += `👑 *HABILIDADES DE LIDERAZGO*\n`;
               if (Object.keys(metadata.presidentEffects.effectCostReduction).length > 0) {
-                message += `📉 *Reducción de Costos:*\n`;
                 Object.entries(metadata.presidentEffects.effectCostReduction).forEach(([key, value]) => {
                   message += `• ${key}: -${value}%\n`;
                 });
               }
               if (Object.keys(metadata.presidentEffects.developmentEffect).length > 0) {
-                message += `📈 *Efectos de Desarrollo:*\n`;
                 Object.entries(metadata.presidentEffects.developmentEffect).forEach(([key, value]) => {
-                  message += `• ${key}: +${value}%\n`;
-                });
-              }
-              if (metadata.presidentEffects.bonusEffect) {
-                message += `✨ *Bonus Especiales:*\n`;
-                Object.entries(metadata.presidentEffects.bonusEffect).forEach(([key, value]) => {
                   message += `• ${key}: +${value}%\n`;
                 });
               }
@@ -196,33 +171,13 @@ Te notificaré cuando pueda ser revelado.`,
             message += `━━━━ ESTADÍSTICAS ━━━━\n`;
             message += `⚡ Influencia: ${metadata.influencePointsGeneration}/día\n\n`;
             
-            if (metadata.specialEffects) {
-              if (Object.keys(metadata.specialEffects.votingEffect).length > 0) {
-                message += `🗳️ *Poder de Voto:*\n`;
-                Object.entries(metadata.specialEffects.votingEffect).forEach(([key, value]) => {
-                  message += `• ${key}: +${value}%\n`;
-                });
-              }
-              if (Object.keys(metadata.specialEffects.specialEffect).length > 0) {
-                message += `🛡️ *Efectos Anti-Crisis:*\n`;
-                Object.entries(metadata.specialEffects.specialEffect).forEach(([key, value]) => {
-                  message += `• ${key}: +${value}%\n`;
-                });
-              }
+            if (metadata.specialEffects && Object.keys(metadata.specialEffects.votingEffect).length > 0) {
+              message += `🗳️ *EFECTOS*\n`;
+              Object.entries(metadata.specialEffects.votingEffect).forEach(([key, value]) => {
+                message += `• ${key}: +${value}%\n`;
+              });
             }
             break;
-        }
-      
-        if (metadata.description) {
-          message += `\n📖 *HISTORIA*\n`;
-          message += `_${metadata.description}_\n`;
-        }
-      
-        if (metadata.cardNarratives && Object.keys(metadata.cardNarratives).length > 0) {
-          message += `\n📖 *EFECTOS NARRATIVOS*\n`;
-          Object.entries(metadata.cardNarratives).forEach(([percentage, narrative]) => {
-            message += `• ${percentage}% adopción: _${narrative}_\n`;
-          });
         }
       
         message += `\n━━━━━━━━━━━━━━━\n`;
@@ -232,7 +187,7 @@ Te notificaré cuando pueda ser revelado.`,
         await ctx.reply(message, { 
           parse_mode: 'Markdown'
         });
-      }else {
+    }else {
       throw new Error('No se pudo obtener la información del NFT revelado');
     }
 
