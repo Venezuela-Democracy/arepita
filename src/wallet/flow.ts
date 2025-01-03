@@ -277,19 +277,18 @@ export class FlowWallet {
               let collectionData = VenezuelaNFT_13.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
                 ?? panic("ViewResolver does not resolve NFTCollectionData view")
   
-              // Return early if the account already has a collection
-              if signer.storage.borrow<&VenezuelaNFT_13.Collection>(from: collectionData.storagePath) != nil {
-                return
+              // Solo creamos la colección si no existe
+              if signer.storage.borrow<&VenezuelaNFT_13.Collection>(from: collectionData.storagePath) == nil {
+                // Create a new empty collection
+                let collection <- VenezuelaNFT_13.createEmptyCollection(nftType: Type<@VenezuelaNFT_13.NFT>())
+  
+                // save it to the account
+                signer.storage.save(<-collection, to: collectionData.storagePath)
+  
+                // create a public capability for the collection
+                let collectionCap = signer.capabilities.storage.issue<&VenezuelaNFT_13.Collection>(collectionData.storagePath)
+                signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
               }
-              // Create a new empty collection
-              let collection <- VenezuelaNFT_13.createEmptyCollection(nftType: Type<@VenezuelaNFT_13.NFT>())
-  
-              // save it to the account
-              signer.storage.save(<-collection, to: collectionData.storagePath)
-  
-              // create a public capability for the collection
-              let collectionCap = signer.capabilities.storage.issue<&VenezuelaNFT_13.Collection>(collectionData.storagePath)
-              signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
               
               // Commit my bet and get a receipt
               let receipt <- VenezuelaNFT_13.buyPack(setID: setID)
