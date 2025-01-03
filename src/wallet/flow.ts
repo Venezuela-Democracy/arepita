@@ -407,4 +407,107 @@ export class FlowWallet {
       throw new Error('Failed to get NFT metadata');
     }
   }
+
+  async getNFTCollection(address: string): Promise<{ 
+    locations: any[], 
+    characters: any[], 
+    culturalItems: any[] 
+  }> {
+    try {
+      // Get all NFTs for the address
+      const nfts = await fcl.query({
+        cadence: `
+          import VenezuelaNFT_13 from ${flowConfig.venezuelaNFTAddress}
+          import MetadataViews from ${flowConfig.metadataViews}
+  
+          access(all) fun main(account: Address): [AnyStruct]? {
+            let account = getAccount(account)
+            let answer: [AnyStruct] = []
+            var nft: AnyStruct = nil
+  
+            let cap = account.capabilities
+              .borrow<&VenezuelaNFT_13.Collection>(VenezuelaNFT_13.CollectionPublicPath)
+              ?? panic("Could not borrow collection capability")
+  
+            let ids = cap.getIDs()
+  
+            for id in ids {
+              let resolver = cap.borrowViewResolver(id: id)!
+              let displayView = MetadataViews.getDisplay(resolver)!
+              let serialView = MetadataViews.getSerial(resolver)!
+              let traits = MetadataViews.getTraits(resolver)!
+              let cardType = VenezuelaNFT_13.getCardType(cardID: UInt32(id))
+  
+              nft = {
+                "nftId": id,
+                "serial": serialView,
+                "display": displayView,
+                "traits": traits,
+                "type": cardType
+              }
+              
+              answer.append(nft)
+            }
+            return answer
+          }
+        `,
+        args: (arg: any, t: any) => [arg(address, t.Address)]
+      });
+  
+      // Initialize grouped NFTs object
+      const groupedNFTs = {
+        locations: [] as any[],
+        characters: [] as any[],
+        culturalItems: [] as any[]
+      };
+  
+      // If no NFTs found, return empty groups
+      if (!nfts) {
+        return groupedNFTs;
+      }
+  
+      // Process each NFT
+      for (const nft of nfts) {
+        try {
+          const { cardType, metadata } = await this.getNFTMetadata(nft.nftId);
+          const enrichedNFT = {
+            id: nft.nftId,
+            ...metadata,
+            display: nft.display,
+            serial: nft.serial,
+            traits: nft.traits
+          };
+          
+          // Group by card type
+          switch(cardType) {
+            case 'A.826dae42290107c3.VenezuelaNFT_13.LocationCard':
+              groupedNFTs.locations.push(enrichedNFT);
+              break;
+            case 'A.826dae42290107c3.VenezuelaNFT_13.CharacterCard':
+              groupedNFTs.characters.push(enrichedNFT);
+              break;
+            case 'A.826dae42290107c3.VenezuelaNFT_13.CulturalItemCard':
+              groupedNFTs.culturalItems.push(enrichedNFT);
+              break;
+            default:
+              console.warn(`Unknown card type: ${cardType} for NFT ID: ${nft.nftId}`);
+          }
+        } catch (error) {
+          console.error(`Error processing NFT ${nft.nftId}:`, error);
+          // Continue with next NFT even if one fails
+          continue;
+        }
+      }
+  
+      // Sort each array by ID
+      groupedNFTs.locations.sort((a, b) => a.id - b.id);
+      groupedNFTs.characters.sort((a, b) => a.id - b.id);
+      groupedNFTs.culturalItems.sort((a, b) => a.id - b.id);
+  
+      return groupedNFTs;
+    } catch (error) {
+      console.error('Error getting NFT collection:', error);
+      throw new Error('Failed to get NFT collection');
+    }
+  }
 }
