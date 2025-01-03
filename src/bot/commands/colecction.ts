@@ -25,67 +25,87 @@ const getCollectionKeyboard = (
 const formatNFTMessage = (nft: any, type: string) => {
     try {
       // Verificar que tenemos los datos necesarios
-      if (!nft || !nft.metadata) {
+      if (!nft || !nft.display) {
         console.error('NFT data is invalid:', nft);
         return '❌ Error: No se pudieron cargar los datos del NFT';
       }
   
       // Inicio del mensaje con manejo seguro de la imagen
       let message = '';
-      if (nft.metadata.image) {
-        message += `[⚜️](${nft.metadata.image})`;
+      if (nft.display.thumbnail?.url) {
+        message += `[⚜️](${nft.display.thumbnail.url})`;
       }
-      message += `*${nft.metadata.name || 'NFT'}*\n`;
+      message += `*${nft.display.name || 'NFT'}*\n`;
       message += `━━━━━━━━━━━━━━━\n\n`;
+  
+      // Obtener los traits como un objeto para fácil acceso
+      const traits = nft.traits?.traits?.reduce((acc: any, trait: any) => {
+        acc[trait.name] = trait.value;
+        return acc;
+      }, {}) || {};
   
       switch (type) {
         case 'locations':
           message += `📍 *UBICACIÓN*\n`;
-          message += `🌎 Región: ${nft.metadata.region || 'N/A'}\n`;
+          message += `🌎 Región: ${traits.region || 'N/A'}\n`;
           message += `━━━━ ESTADÍSTICAS ━━━━\n`;
-          message += `⚡ Poder de Influencia: ${nft.metadata.influencePointsGeneration || '0'}/día\n`;
-          message += `🏗️ Desarrollo Regional: ${nft.metadata.regionalGeneration || '0'}/día\n`;
-          message += `🎯 Especialidad: ${nft.metadata.type || 'N/A'}\n`;
+          message += `⚡ Poder de Influencia: ${traits.influence_generation || '0'}/día\n`;
+          message += `🏗️ Desarrollo Regional: ${traits.regional_generation || '0'}/día\n`;
+          message += `🎯 Especialidad: ${traits.type || 'N/A'}\n`;
           break;
   
         case 'characters':
           message += `👤 *PERSONAJE*\n`;
-          message += `🎭 Clase: ${(nft.metadata.characterTypes || []).join(' / ') || 'N/A'}\n`;
+          message += `🎭 Clase: ${traits.characterTypes || 'N/A'}\n`;
           message += `━━━━ ESTADÍSTICAS ━━━━\n`;
-          message += `⚡ Influencia: ${nft.metadata.influencePointsGeneration || '0'}/día\n`;
-          message += `💰 Costo de Campaña: ${nft.metadata.launchCost || '0'}\n\n`;
+          message += `⚡ Influencia: ${traits.influence_generation || '0'}/día\n`;
+          message += `💰 Costo de Campaña: ${traits.launchCost || '0'}\n\n`;
           
-          if (nft.metadata.presidentEffects) {
+          if (traits.presidentEffects) {
             message += `👑 *HABILIDADES DE LIDERAZGO*\n`;
-            const effects = nft.metadata.presidentEffects;
-            
-            if (effects.effectCostReduction && Object.keys(effects.effectCostReduction).length > 0) {
-              Object.entries(effects.effectCostReduction).forEach(([key, value]) => {
-                message += `• ${key}: -${value}%\n`;
-              });
-            }
-            
-            if (effects.developmentEffect && Object.keys(effects.developmentEffect).length > 0) {
-              Object.entries(effects.developmentEffect).forEach(([key, value]) => {
-                message += `• ${key}: +${value}%\n`;
-              });
+            try {
+              const effects = JSON.parse(traits.presidentEffects);
+              if (effects.effectCostReduction) {
+                Object.entries(effects.effectCostReduction).forEach(([key, value]) => {
+                  message += `• ${key}: -${value}%\n`;
+                });
+              }
+              if (effects.developmentEffect) {
+                Object.entries(effects.developmentEffect).forEach(([key, value]) => {
+                  message += `• ${key}: +${value}%\n`;
+                });
+              }
+            } catch (e) {
+              console.error('Error parsing president effects:', e);
             }
           }
           break;
   
         case 'items':
           message += `🎨 *ITEM CULTURAL*\n`;
-          message += `🎯 Categoría: ${nft.metadata.type || 'N/A'}\n`;
+          message += `🎯 Categoría: ${traits.type || 'N/A'}\n`;
           message += `━━━━ ESTADÍSTICAS ━━━━\n`;
-          message += `⚡ Influencia: ${nft.metadata.influencePointsGeneration || '0'}/día\n\n`;
+          message += `⚡ Influencia: ${traits.influence_generation || '0'}/día\n\n`;
           
-          if (nft.metadata.specialEffects?.votingEffect) {
-            message += `🗳️ *EFECTOS*\n`;
-            Object.entries(nft.metadata.specialEffects.votingEffect).forEach(([key, value]) => {
-              message += `• ${key}: +${value}%\n`;
-            });
+          if (traits.specialEffects) {
+            try {
+              const effects = JSON.parse(traits.specialEffects);
+              if (effects.votingEffect) {
+                message += `🗳️ *EFECTOS*\n`;
+                Object.entries(effects.votingEffect).forEach(([key, value]) => {
+                  message += `• ${key}: +${value}%\n`;
+                });
+              }
+            } catch (e) {
+              console.error('Error parsing special effects:', e);
+            }
           }
           break;
+      }
+  
+      // Añadir descripción si existe
+      if (nft.display.description) {
+        message += `\n📝 *Descripción*\n${nft.display.description}\n`;
       }
   
       return message;
@@ -94,7 +114,6 @@ const formatNFTMessage = (nft: any, type: string) => {
       return '❌ Error al formatear los datos del NFT';
     }
   };
-
 const getNavigationKeyboard = (currentIndex: number, totalItems: number, type: string) => {
   const buttons = [];
   
@@ -154,11 +173,12 @@ export const collectionActionHandler = async (ctx: BotContext) => {
     try {
       if (!ctx.callbackQuery || !('data' in ctx.callbackQuery)) return;
   
-      const match = ctx.callbackQuery.data.match(/collection:(\w+):(\d+)/);
+      // Modificar el regex para hacer el índice opcional
+      const match = ctx.callbackQuery.data.match(/collection:(\w+)(?::(\d+))?/);
       if (!match) return;
   
-      const [_, type, index] = match;
-      const numIndex = parseInt(index);
+      const [_, type, indexStr] = match;
+      const numIndex = indexStr ? parseInt(indexStr) : 0;
   
       const address = await UserService.getWalletAddress(ctx.from?.id.toString() || '');
       if (!address) {
@@ -171,6 +191,7 @@ export const collectionActionHandler = async (ctx: BotContext) => {
       const collection = await flowWallet.getNFTCollection(address);
       console.log('Colección obtenida:', JSON.stringify(collection, null, 2));
   
+      // Si el tipo es 'main' o no hay índice, mostrar el menú principal
       if (type === 'main') {
         await ctx.editMessageText(
           `🗂 *Tu Colección de NFTs*\n\n` +
@@ -216,7 +237,6 @@ export const collectionActionHandler = async (ctx: BotContext) => {
     } catch (error) {
       console.error('Error en collection action:', error);
       await ctx.answerCbQuery('Error procesando la acción');
-      // Intentar enviar un mensaje de error más detallado al usuario
       try {
         await ctx.editMessageText(
           '❌ Ocurrió un error al cargar los datos del NFT.\nPor favor, intenta de nuevo.',
