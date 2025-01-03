@@ -60,15 +60,6 @@ export class FlowWallet {
       if (!key || !key.publicKey) {
         throw new Error('Invalid key configuration');
       }
-
-      console.log(`✅ Service account verified:
-        Address: ${this.serviceAccount.address}
-        Key Index: ${this.serviceAccount.keyIndex}
-        Public Key: ${key.publicKey}
-        Weight: ${key.weight}
-        Revoked: ${key.revoked}
-      `);
-
       return true;
     } catch (error) {
       console.error('Service account verification failed:', error);

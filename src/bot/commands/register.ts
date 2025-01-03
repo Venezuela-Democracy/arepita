@@ -6,6 +6,7 @@ import { UserService } from '../../services';
 import { FlowWallet } from '../../wallet';
 import { VenezuelaRegion } from '../regions';
 import { Context } from 'telegraf';
+import { TelegramGroupManager } from '../managers/group';
 
 const flowWallet = new FlowWallet();
 
@@ -69,60 +70,62 @@ type RegionActionContext = Context & {
   match: RegExpExecArray;
 } & BotContext;
 
-export const registerActionHandler = async (ctx: RegionActionContext) => {
-  try {
-    if (!ctx.session || ctx.session.registrationStep !== 'WAITING_REGION') {
-      await ctx.answerCbQuery('Sesión inválida. Por favor, inicia el registro nuevamente.');
-      return;
+export const registerActionHandler = (groupManager: TelegramGroupManager) => async (ctx: RegionActionContext) => {
+    try {
+        if (!ctx.session || ctx.session.registrationStep !== 'WAITING_REGION') {
+            await ctx.answerCbQuery('Sesión inválida. Por favor, inicia el registro nuevamente.');
+            return;
+        }
+
+        const selectedRegion = ctx.match[1];
+        const telegramId = ctx.from?.id.toString();
+
+        if (!telegramId || !ctx.from) {
+            await ctx.answerCbQuery('Error: ID de usuario no encontrado');
+            return;
+        }
+
+        await ctx.answerCbQuery(`Has seleccionado: ${VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY]}`);
+
+        await ctx.editMessageText(
+            `🎯 Has seleccionado: *${VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY]}*\n\n` +
+            'Procesando registro y añadiéndote a los grupos...',
+            { parse_mode: 'Markdown' }
+        );
+
+        const wallet = await flowWallet.createWallet();
+        
+        await UserService.createUser({
+            telegramId,
+            region: selectedRegion as VenezuelaRegion,
+            wallet: {
+                address: wallet.address,
+                privateKey: wallet.privateKey
+            }
+        });
+
+        // Añadir usuario a los grupos
+        await groupManager.addUserToGroups(ctx.from.id, selectedRegion);
+
+        ctx.session.registrationStep = 'COMPLETED';
+        ctx.session.selectedRegion = selectedRegion as VenezuelaRegion;
+
+        await ctx.editMessageText(
+            `✅ ¡Registro exitoso!\n\n` +
+            `🏠 Región: ${VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY]}\n` +
+            `💫 Tu wallet ha sido creada exitosamente\n` +
+            `👥 Te he enviado los enlaces de los grupos por mensaje privado\n\n` +
+            `Usa /help para ver los comandos disponibles.`
+        );
+
+        await ctx.telegram.sendMessage(
+            ctx.from.id,
+            `🔐 Guarda esta información en un lugar seguro:\n\n` +
+            `📫 Dirección: ${wallet.address}\n`
+        );
+
+    } catch (error) {
+        console.error('Error en registro:', error);
+        await ctx.editMessageText(ERROR_MESSAGES.GENERIC);
     }
-
-    const selectedRegion = ctx.match[1];
-    const telegramId = ctx.from?.id.toString();
-
-    if (!telegramId || !ctx.from) {
-      await ctx.answerCbQuery('Error: ID de usuario no encontrado');
-      return;
-    }
-
-    await ctx.answerCbQuery(`Has seleccionado: ${VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY]}`);
-
-    await ctx.editMessageText(
-      `🎯 Has seleccionado: *${VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY]}*\n\n` +
-      'Procesando registro...',
-      { parse_mode: 'Markdown' }
-    );
-
-    const wallet = await flowWallet.createWallet();
-    
-    await UserService.createUser({
-      telegramId,
-      region: selectedRegion as VenezuelaRegion,
-      wallet: {
-        address: wallet.address,
-        privateKey: wallet.privateKey
-      }
-    });
-
-    ctx.session.registrationStep = 'COMPLETED';
-    ctx.session.selectedRegion = selectedRegion as VenezuelaRegion;
-
-    await ctx.editMessageText(
-      `✅ ¡Registro exitoso!\n\n` +
-      `🏠 Región: ${VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY]}\n` +
-      `💫 Tu wallet ha sido creada exitosamente.\n\n` +
-      `Usa /help para ver los comandos disponibles.`
-    );
-
-    await ctx.telegram.sendMessage(
-      ctx.from.id,
-      `🔐 Guarda esta información en un lugar seguro:\n\n` +
-      `📫 Dirección: ${wallet.address}\n` +
-      `🔑 Private Key: ${wallet.privateKey}\n\n` +
-      `⚠️ NUNCA compartas tu Private Key con nadie.`
-    );
-
-  } catch (error) {
-    console.error('Error en registro:', error);
-    await ctx.editMessageText(ERROR_MESSAGES.GENERIC);
-  }
 };

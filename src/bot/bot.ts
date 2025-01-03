@@ -3,19 +3,22 @@ import { BotContext, CommandValue } from './types';
 import { registerCommands } from './commands';
 import { BOT_COMMANDS, ERROR_MESSAGES } from './constants';
 import { formatMessage, isValidCommand } from './utils';
+import { TelegramGroupManager } from './managers/group';
 
 export class TelegramBot {
   private bot: Telegraf<BotContext>;
+  private groupManager: TelegramGroupManager; // Añadir esta propiedad
 
   constructor(token: string) {
     this.bot = new Telegraf<BotContext>(token);
-    
+    this.groupManager = new TelegramGroupManager(this.bot); // Inicializar el manager
+
     // Configurar middleware de sesión
     this.bot.use(session());
 
     // Registrar comandos
     try {
-      registerCommands(this.bot);
+      registerCommands(this.bot, this.groupManager);
       console.log('🤖 Comandos registrados en constructor');
     } catch (error) {
       console.error('❌ Error registrando comandos:', error);
@@ -25,6 +28,10 @@ export class TelegramBot {
     // Configurar manejadores
     this.setupMessageHandlers();
     this.setupErrorHandler();
+  }
+
+  getGroupManager() {
+    return this.groupManager;
   }
 
   private setupMessageHandlers() {
@@ -73,7 +80,9 @@ export class TelegramBot {
 
   async launch() {
     try {
-      await this.bot.launch();
+      await this.bot.launch({
+        allowedUpdates: ['message', 'callback_query', 'chat_member']
+      });
       console.log('🚀 Bot launched successfully');
     } catch (error) {
       console.error('❌ Error launching bot:', error);
