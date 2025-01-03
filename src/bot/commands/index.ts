@@ -9,6 +9,7 @@ import { statusHandler } from './status';
 import { buyPackHandler } from './buypack';
 import { TelegramGroupManager } from '../managers/group';
 import { setupChatMemberListener } from '../listeners';
+import { collectionActionHandler, collectionHandler } from './colecction';
 
 export const registerCommands = (bot: Telegraf<BotContext>, groupManager: TelegramGroupManager) => {
     console.log('📝 Registrando comandos y eventos...');
@@ -16,7 +17,8 @@ export const registerCommands = (bot: Telegraf<BotContext>, groupManager: Telegr
     // Comandos básicos
     bot.command([BOT_COMMANDS.START, BOT_COMMANDS.REGISTER], registerHandler);
     bot.action(/^region:(.+)$/, registerActionHandler(groupManager));
-    
+    bot.command(BOT_COMMANDS.COLLECTION, collectionHandler);
+    bot.action(/^collection:(.+):(\d+)$/, collectionActionHandler);
     bot.command(BOT_COMMANDS.BALANCE, balanceHandler);
     bot.command(BOT_COMMANDS.WALLET, walletHandler);
     bot.command(BOT_COMMANDS.HELP, helpHandler);

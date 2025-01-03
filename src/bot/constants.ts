@@ -6,6 +6,7 @@ export const BOT_COMMANDS = {
   WALLET: 'wallet',
   REGISTER: 'register',
   BUYPACK: 'buypack',
+  COLLECTION: 'collection',
 } as const;
 
 export const ERROR_MESSAGES = {
@@ -37,7 +38,7 @@ Para comenzar, necesitas registrarte usando /register.
 
 🎮 *NFTs*
 /buypack - Comprar un pack de NFTs
-
+/collection - Ver tu colección
 ℹ️ *Otros*
 /help - Ver este mensaje de ayuda
 /status - Verificar estado del bot`,
