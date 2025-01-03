@@ -126,38 +126,113 @@ Te notificaré cuando pueda ser revelado.`,
     const revealEvent = events.find((e: any) => e.type.includes('PackRevealed'));
 
     if (revealEvent) {
-      const nftID = revealEvent.data.nftID;
-      const metadata = await wallet.getNFTMetadata(authData.address, nftID);
-
-      let message = `🎉 *¡Pack revelado exitosamente!*\n\n`;
-      message += `Has obtenido:\n`;
-      message += `🎴 *${metadata.name}*\n`;
-      message += `📋 Tipo: ${metadata.type}\n\n`;
-
-      switch (metadata.type) {
-        case 'Location':
-          message += `🌎 Región: ${metadata.region}\n`;
-          message += `⚡ Generación: ${metadata.generation}\n`;
-          message += `🏗️ Generación Regional: ${metadata.regionalGeneration}\n`;
-          break;
-        case 'Character':
-          message += `🎭 Tipos: ${metadata.characterTypes.join(', ')}\n`;
-          message += `⚡ Puntos de Influencia: ${metadata.influencePoints}\n`;
-          message += `💰 Costo de Lanzamiento: ${metadata.launchCost}\n`;
-          break;
-        case 'CulturalItem':
-          message += `🎨 Tipo de Item: ${metadata.itemType}\n`;
-          message += `⚡ Puntos de Influencia: ${metadata.influencePoints}\n`;
-          break;
-      }
-
-      message += `\n🔍 *Detalles de las transacciones:*\n`;
-      message += `Compra: \`${buyTxId}\`\n`;
-      message += `Revelación: \`${revealTxId}\`\n\n`;
-      message += `💡 _Usa /collection para ver todos tus NFTs_`;
-
-      await ctx.reply(message, { parse_mode: 'Markdown' });
-    } else {
+        const nftID = revealEvent.data.cardID;
+        const { cardType, metadata } = await wallet.getNFTMetadata(nftID);
+        
+        // Array de gateways IPFS para fallback
+        const ipfsGateways = [
+          `https://ipfs.io/ipfs/${metadata.ipfsCID}`,
+          `https://gateway.pinata.cloud/ipfs/${metadata.ipfsCID}`,
+          `https://cloudflare-ipfs.com/ipfs/${metadata.ipfsCID}`,
+          `https://ipfs.infura.io/ipfs/${metadata.ipfsCID}`
+        ];
+        
+        let message = `🎉 *¡NUEVA CARTA!*\n\n`;
+        message += `[⚜️](${ipfsGateways[0]}) *${metadata.name}* #${metadata.serial}\n`;
+        message += `━━━━━━━━━━━━━━━\n\n`;
+      
+        switch (cardType) {
+          case 'A.826dae42290107c3.VenezuelaNFT_13.LocationCard':
+            message += `📍 *UBICACIÓN*\n`;
+            message += `🌎 Región: ${metadata.region}\n`;
+            message += `━━━━ ESTADÍSTICAS ━━━━\n`;
+            message += `⚡ Poder de Influencia: ${metadata.generation}/día\n`;
+            message += `🏗️ Desarrollo Regional: ${metadata.regionalGeneration}/día\n`;
+            message += `🎯 Especialidad: ${metadata.type}\n\n`;
+            
+            if (metadata.availableProposals && metadata.availableProposals.length > 0) {
+              message += `📜 *PROPUESTAS*\n`;
+              metadata.availableProposals.forEach((proposal: any) => {
+                message += `• ${proposal.proposalName}\n`;
+                message += `  └ Efecto: +${proposal.effect}% (${proposal.duration})\n`;
+                message += `  └ Req: ${proposal.adoptionRequirement}%\n`;
+              });
+            }
+            break;
+      
+          case 'A.826dae42290107c3.VenezuelaNFT_13.CharacterCard':
+            message += `👤 *PERSONAJE*\n`;
+            message += `🎭 Clase: ${metadata.characterTypes.join(' / ')}\n`;
+            message += `━━━━ ESTADÍSTICAS ━━━━\n`;
+            message += `⚡ Influencia: ${metadata.influencePointsGeneration}/día\n`;
+            message += `💰 Costo de Campaña: ${metadata.launchCost}\n\n`;
+            
+            if (metadata.presidentEffects) {
+              message += `👑 *HABILIDADES DE LIDERAZGO*\n`;
+              if (Object.keys(metadata.presidentEffects.effectCostReduction).length > 0) {
+                message += `📉 *Reducción de Costos:*\n`;
+                Object.entries(metadata.presidentEffects.effectCostReduction).forEach(([key, value]) => {
+                  message += `• ${key}: -${value}%\n`;
+                });
+              }
+              if (Object.keys(metadata.presidentEffects.developmentEffect).length > 0) {
+                message += `📈 *Efectos de Desarrollo:*\n`;
+                Object.entries(metadata.presidentEffects.developmentEffect).forEach(([key, value]) => {
+                  message += `• ${key}: +${value}%\n`;
+                });
+              }
+              if (metadata.presidentEffects.bonusEffect) {
+                message += `✨ *Bonus Especiales:*\n`;
+                Object.entries(metadata.presidentEffects.bonusEffect).forEach(([key, value]) => {
+                  message += `• ${key}: +${value}%\n`;
+                });
+              }
+            }
+            break;
+      
+          case 'A.826dae42290107c3.VenezuelaNFT_13.CulturalItemCard':
+            message += `🎨 *ITEM CULTURAL*\n`;
+            message += `🎯 Categoría: ${metadata.type}\n`;
+            message += `━━━━ ESTADÍSTICAS ━━━━\n`;
+            message += `⚡ Influencia: ${metadata.influencePointsGeneration}/día\n\n`;
+            
+            if (metadata.specialEffects) {
+              if (Object.keys(metadata.specialEffects.votingEffect).length > 0) {
+                message += `🗳️ *Poder de Voto:*\n`;
+                Object.entries(metadata.specialEffects.votingEffect).forEach(([key, value]) => {
+                  message += `• ${key}: +${value}%\n`;
+                });
+              }
+              if (Object.keys(metadata.specialEffects.specialEffect).length > 0) {
+                message += `🛡️ *Efectos Anti-Crisis:*\n`;
+                Object.entries(metadata.specialEffects.specialEffect).forEach(([key, value]) => {
+                  message += `• ${key}: +${value}%\n`;
+                });
+              }
+            }
+            break;
+        }
+      
+        if (metadata.description) {
+          message += `\n📖 *HISTORIA*\n`;
+          message += `_${metadata.description}_\n`;
+        }
+      
+        if (metadata.cardNarratives && Object.keys(metadata.cardNarratives).length > 0) {
+          message += `\n📖 *EFECTOS NARRATIVOS*\n`;
+          Object.entries(metadata.cardNarratives).forEach(([percentage, narrative]) => {
+            message += `• ${percentage}% adopción: _${narrative}_\n`;
+          });
+        }
+      
+        message += `\n━━━━━━━━━━━━━━━\n`;
+        message += `🎴 Set: ${metadata.setId} • ID: ${nftID}\n`;
+        message += `💡 _Usa /collection para ver tu colección_`;
+      
+        await ctx.reply(message, { 
+          parse_mode: 'Markdown'
+        });
+      }else {
       throw new Error('No se pudo obtener la información del NFT revelado');
     }
 

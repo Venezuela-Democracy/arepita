@@ -265,47 +265,45 @@ export class FlowWallet {
         address: userAddress, 
         privateKey: privateKey 
       });
-
+  
       const transactionId = await fcl.mutate({
-      cadence: `
-        import VenezuelaNFT_9 from ${flowConfig.venezuelaNFTAddress}
-        import NonFungibleToken from ${flowConfig.nonFungibleToken}
-        import MetadataViews from ${flowConfig.metadataViews}
-
-        transaction(setID: UInt32) {
+        cadence: `
+          import VenezuelaNFT_13 from ${flowConfig.venezuelaNFTAddress}
+          import NonFungibleToken from ${flowConfig.nonFungibleToken}
+          import MetadataViews from ${flowConfig.metadataViews}
+  
+          transaction(setID: UInt32) {
             prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue, UnpublishCapability) &Account) {
-                let collectionData = VenezuelaNFT_9.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
-                    ?? panic("ViewResolver does not resolve NFTCollectionData view")
-
-                // Return early if the account already has a collection
-                if signer.storage.borrow<&VenezuelaNFT_9.Collection>(from: collectionData.storagePath) != nil {
-                    return
-                }
-                // Create a new empty collection
-                let collection <- VenezuelaNFT_9.createEmptyCollection(nftType: Type<@VenezuelaNFT_9.NFT>())
-
-                // save it to the account
-                signer.storage.save(<-collection, to: collectionData.storagePath)
-
-                // the old "unlink"
-                let oldLink = signer.capabilities.unpublish(collectionData.publicPath)
-                // create a public capability for the collection
-                let collectionCap = signer.capabilities.storage.issue<&VenezuelaNFT_9.Collection>(collectionData.storagePath)
-                signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
-                
-                // Commit my bet and get a receipt
-                let receipt <- VenezuelaNFT_9.buyPack(setID: setID)
-                
-                // Check that I don't already have a receipt stored
-                if signer.storage.type(at: VenezuelaNFT_9.ReceiptStoragePath) != nil {
-                    panic("Storage collision at path=".concat(VenezuelaNFT_9.ReceiptStoragePath.toString()).concat(" a Receipt is already stored!"))
-                }
-
-                // Save that receipt to my storage
-                signer.storage.save(<-receipt, to: VenezuelaNFT_9.ReceiptStoragePath)
+              let collectionData = VenezuelaNFT_13.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
+                ?? panic("ViewResolver does not resolve NFTCollectionData view")
+  
+              // Return early if the account already has a collection
+              if signer.storage.borrow<&VenezuelaNFT_13.Collection>(from: collectionData.storagePath) != nil {
+                return
+              }
+              // Create a new empty collection
+              let collection <- VenezuelaNFT_13.createEmptyCollection(nftType: Type<@VenezuelaNFT_13.NFT>())
+  
+              // save it to the account
+              signer.storage.save(<-collection, to: collectionData.storagePath)
+  
+              // create a public capability for the collection
+              let collectionCap = signer.capabilities.storage.issue<&VenezuelaNFT_13.Collection>(collectionData.storagePath)
+              signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
+              
+              // Commit my bet and get a receipt
+              let receipt <- VenezuelaNFT_13.buyPack(setID: setID)
+              
+              // Check that I don't already have a receipt stored
+              if signer.storage.type(at: VenezuelaNFT_13.ReceiptStoragePath) != nil {
+                panic("Storage collision at path=".concat(VenezuelaNFT_13.ReceiptStoragePath.toString()).concat(" a Receipt is already stored!"))
+              }
+  
+              // Save that receipt to my storage
+              signer.storage.save(<-receipt, to: VenezuelaNFT_13.ReceiptStoragePath)
             }
-        }
-      `,
+          }
+        `,
         args: (arg: any, t: any) => [
           arg(0, t.UInt32) // Usando setID 0
         ],
@@ -321,7 +319,7 @@ export class FlowWallet {
       throw new Error('Failed to buy pack');
     }
   }
-
+  
   async revealPack(userAddress: string, privateKey: string): Promise<string> {
     try {
       const authorization = await this.getAuthorization({
@@ -331,21 +329,21 @@ export class FlowWallet {
   
       const transactionId = await fcl.mutate({
         cadence: `
-          import VenezuelaNFT_9 from ${flowConfig.venezuelaNFTAddress}
+          import VenezuelaNFT_13 from ${flowConfig.venezuelaNFTAddress}
           import NonFungibleToken from ${flowConfig.nonFungibleToken}
           import MetadataViews from ${flowConfig.metadataViews}
   
           transaction {
             prepare(signer: auth(BorrowValue, LoadValue) &Account) {
-              let receiverRef = signer.capabilities.borrow<&{VenezuelaNFT_9.VenezuelaNFT_9CollectionPublic}>(VenezuelaNFT_9.CollectionPublicPath)
+              let receiverRef = signer.capabilities.borrow<&{VenezuelaNFT_13.VenezuelaNFT_13CollectionPublic}>(VenezuelaNFT_13.CollectionPublicPath)
                   ?? panic("Cannot borrow a reference to the recipient's moment collection")
               
               // Load receipt from storage
-              let receipt <- signer.storage.load<@VenezuelaNFT_9.Receipt>(from: VenezuelaNFT_9.ReceiptStoragePath)
+              let receipt <- signer.storage.load<@VenezuelaNFT_13.Receipt>(from: VenezuelaNFT_13.ReceiptStoragePath)
                   ?? panic("No Receipt found in storage")
   
               // Reveal by redeeming receipt
-              VenezuelaNFT_9.revealPack(
+              VenezuelaNFT_13.revealPack(
                 receipt: <-receipt, 
                 minter: signer.address,
                 emptyDict: {}
@@ -366,67 +364,45 @@ export class FlowWallet {
     }
   }
 
-  async getNFTMetadata(userAddress: string, nftID: string): Promise<any> {
+  async getNFTMetadata(cardID: number): Promise<any> {
     try {
-      const metadata = await fcl.query({
+      console.log("Obteniendo tipo para Card ID:", cardID);
+      
+      // Primero obtenemos el tipo específico de esta carta
+      const cardType = await fcl.query({
         cadence: `
-          import VenezuelaNFT_10 from ${flowConfig.venezuelaNFTAddress}
-          import NonFungibleToken from ${flowConfig.nonFungibleToken}
-          import MetadataViews from ${flowConfig.metadataViews}
-  
-          access(all) fun main(address: Address, nftID: UInt64): {String: AnyStruct} {
-            let account = getAccount(address)
-            
-            let collectionRef = account
-              .capabilities
-              .borrow<&{VenezuelaNFT_10.VenezuelaNFT_10CollectionPublic}>(
-                VenezuelaNFT_10.CollectionPublicPath
-              ) ?? panic("Could not borrow collection reference")
-  
-            let nft = collectionRef.borrowNFT(nftID)
-              ?? panic("Could not borrow NFT reference")
-  
-            // Get basic metadata
-            let metadata: {String: AnyStruct} = {}
-            metadata["id"] = nft.id
-            metadata["name"] = nft.name
-            metadata["description"] = nft.description
-            metadata["image"] = nft.img
-            metadata["ipfsCID"] = nft.ipfsCID
-            metadata["cardType"] = nft.getCardType()
-            metadata["influence_generation"] = nft.influence_generation
-            metadata["setId"] = nft.setId
-            metadata["serial"] = nft.serial
-            metadata["originalMinter"] = nft.orignalMinter
-  
-            // Get specific card metadata based on type
-            let cardType = nft.getCardType()
-            if cardType == Type<VenezuelaNFT_10.LocationCard>() {
-              let card = nft.get_LocationCard()
-              metadata["region"] = card.region
-              metadata["generation"] = card.generation
-              metadata["regionalGeneration"] = card.regionalGeneration
-            } else if cardType == Type<VenezuelaNFT_10.CharacterCard>() {
-              let card = nft.get_CharacterCard()
-              metadata["characterTypes"] = card.characterTypes
-              metadata["influencePoints"] = card.influencePointsGeneration
-              metadata["launchCost"] = card.launchCost
-            } else if cardType == Type<VenezuelaNFT_10.CulturalItemCard>() {
-              let card = nft.get_CulturalItemCard()
-              metadata["itemType"] = card.type
-              metadata["influencePoints"] = card.influencePointsGeneration
-            }
-  
-            return metadata
+          import VenezuelaNFT_13 from ${flowConfig.venezuelaNFTAddress}
+          
+          access(all) fun main(cardID: UInt32): Type {
+            return VenezuelaNFT_13.getCardType(cardID: cardID)
           }
         `,
         args: (arg: any, t: any) => [
-          arg(userAddress, t.Address),
-          arg(nftID, t.UInt64)
+          arg(cardID, t.UInt32)
         ]
       });
   
-      return metadata;
+      console.log("Tipo de carta:", cardType);
+  
+      // Según el tipo, obtenemos la metadata específica
+      const metadata = await fcl.query({
+        cadence: `
+          import VenezuelaNFT_13 from ${flowConfig.venezuelaNFTAddress}
+          
+          access(all) fun main(cardID: UInt32): AnyStruct {
+            return VenezuelaNFT_13.getCardMetadata(cardID: cardID, cardType: VenezuelaNFT_13.getCardType(cardID: cardID))
+          }
+        `,
+        args: (arg: any, t: any) => [
+          arg(cardID, t.UInt32)
+        ]
+      });
+  
+      return {
+        cardType: cardType.typeID,
+        metadata: metadata
+      };
+  
     } catch (error) {
       console.error('Error getting NFT metadata:', error);
       throw new Error('Failed to get NFT metadata');
