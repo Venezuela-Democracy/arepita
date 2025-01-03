@@ -114,7 +114,7 @@ const formatNFTMessage = (nft: any, type: string) => {
       return '❌ Error al formatear los datos del NFT';
     }
   };
-  
+
   const getNavigationKeyboard = (currentIndex: number, totalItems: number, type: string) => {
     const buttons = [];
     
@@ -172,7 +172,8 @@ export const collectionHandler = async (ctx: BotContext) => {
 export const collectionActionHandler = async (ctx: BotContext) => {
     try {
       if (!ctx.callbackQuery || !('data' in ctx.callbackQuery)) return;
-  
+        const callbackData = ctx.callbackQuery.data;
+      console.log('Callback data recibido:', callbackData);
       // Modificar el regex para hacer el índice opcional
       const match = ctx.callbackQuery.data.match(/collection:(\w+)(?::(\d+))?/);
       if (!match) return;
