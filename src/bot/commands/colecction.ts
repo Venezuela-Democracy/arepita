@@ -7,20 +7,20 @@ import { FlowWallet } from '../../wallet';
 const flowWallet = new FlowWallet();
 
 const getCollectionKeyboard = (
-  totalLocations: number,
-  totalCharacters: number,
-  totalItems: number
-) => {
-  return Markup.inlineKeyboard([
-    [
-      Markup.button.callback(`📍 Ubicaciones (${totalLocations})`, 'collection:locations:0'),
-      Markup.button.callback(`👤 Personajes (${totalCharacters})`, 'collection:characters:0')
-    ],
-    [
-      Markup.button.callback(`🎨 Items Culturales (${totalItems})`, 'collection:items:0')
-    ]
-  ]);
-};
+    totalLocations: number,
+    totalCharacters: number,
+    totalItems: number
+  ) => {
+    return Markup.inlineKeyboard([
+      [
+        Markup.button.callback(`📍 Ubicaciones (${totalLocations})`, 'collection:locations:0'),
+        Markup.button.callback(`👤 Personajes (${totalCharacters})`, 'collection:characters:0')
+      ],
+      [
+        Markup.button.callback(`🎨 Items Culturales (${totalItems})`, 'collection:items:0')
+      ]
+    ]);
+  };
 
 const formatNFTMessage = (nft: any, type: string) => {
     try {
@@ -114,22 +114,22 @@ const formatNFTMessage = (nft: any, type: string) => {
       return '❌ Error al formatear los datos del NFT';
     }
   };
-const getNavigationKeyboard = (currentIndex: number, totalItems: number, type: string) => {
-  const buttons = [];
   
-  if (currentIndex > 0) {
-    buttons.push(Markup.button.callback('⬅️ Anterior', `collection:${type}:${currentIndex - 1}`));
-  }
-  
-  if (currentIndex < totalItems - 1) {
-    buttons.push(Markup.button.callback('➡️ Siguiente', `collection:${type}:${currentIndex + 1}`));
-  }
-  
-  buttons.push(Markup.button.callback('🔙 Volver', 'collection:main'));
-  
-  return Markup.inlineKeyboard([buttons]);
-};
-
+  const getNavigationKeyboard = (currentIndex: number, totalItems: number, type: string) => {
+    const buttons = [];
+    
+    if (currentIndex > 0) {
+      buttons.push(Markup.button.callback('⬅️ Anterior', `collection:${type}:${currentIndex - 1}`));
+    }
+    
+    if (currentIndex < totalItems - 1) {
+      buttons.push(Markup.button.callback('➡️ Siguiente', `collection:${type}:${currentIndex + 1}`));
+    }
+    
+    buttons.push(Markup.button.callback('🔙 Volver', 'collection:main'));
+    
+    return Markup.inlineKeyboard([buttons]);
+  };
 export const collectionHandler = async (ctx: BotContext) => {
   try {
     const telegramId = ctx.from?.id.toString();
@@ -191,7 +191,7 @@ export const collectionActionHandler = async (ctx: BotContext) => {
       const collection = await flowWallet.getNFTCollection(address);
       console.log('Colección obtenida:', JSON.stringify(collection, null, 2));
   
-      // Si el tipo es 'main' o no hay índice, mostrar el menú principal
+      // Si el tipo es 'main', mostrar el menú principal
       if (type === 'main') {
         await ctx.editMessageText(
           `🗂 *Tu Colección de NFTs*\n\n` +
@@ -201,11 +201,11 @@ export const collectionActionHandler = async (ctx: BotContext) => {
           `Selecciona una categoría para ver tus NFTs:`,
           {
             parse_mode: 'Markdown',
-            ...getCollectionKeyboard(
+            reply_markup: getCollectionKeyboard(
               collection.locations.length,
               collection.characters.length,
               collection.culturalItems.length
-            )
+            ).reply_markup
           }
         );
         return;
@@ -231,7 +231,7 @@ export const collectionActionHandler = async (ctx: BotContext) => {
       const message = formatNFTMessage(nft, type);
       await ctx.editMessageText(message, {
         parse_mode: 'Markdown',
-        ...getNavigationKeyboard(numIndex, nfts.length, type)
+        reply_markup: getNavigationKeyboard(numIndex, nfts.length, type).reply_markup
       });
   
     } catch (error) {
