@@ -128,9 +128,9 @@ Te notificaré cuando pueda ser revelado.`,
     if (revealEvent) {
         const nftID = revealEvent.data.cardID;
         const { cardType, metadata } = await wallet.getNFTMetadata(nftID);
-        
+        console.log(JSON.stringify(metadata, null, 2));
         let message = `🎉 *¡NUEVA CARTA!*\n\n`;
-        message += `[⚜️](${metadata.image}) *${metadata.name}* #${metadata.serial}\n`;
+        message += `[⚜️](${metadata.image}) *${metadata.name}*\n`;
         message += `━━━━━━━━━━━━━━━\n\n`;
       
         switch (cardType) {
@@ -181,7 +181,6 @@ Te notificaré cuando pueda ser revelado.`,
         }
       
         message += `\n━━━━━━━━━━━━━━━\n`;
-        message += `🎴 Set: ${metadata.setId} • ID: ${nftID}\n`;
         message += `💡 _Usa /collection para ver tu colección_`;
       
         await ctx.reply(message, { 
