@@ -4,6 +4,7 @@ import { VENEZUELA_REGIONS } from '../bot/regions';
 // Interface para TypeScript
 export interface IUser extends Document {
   telegramId: string;
+  language: 'es' | 'en';
   region: keyof typeof VENEZUELA_REGIONS;
   wallet: {
     address: string;
@@ -24,6 +25,8 @@ interface IUserModel extends Model<IUser> {
       privateKey: string;
     };
   }): Promise<IUser>;
+  setUserLanguage(telegramId: string, language: 'es' | 'en'): Promise<IUser | null>;
+  getUserLanguage(telegramId: string): Promise<IUser | null>;
 }
 
 // Schema
@@ -34,6 +37,11 @@ const userSchema = new mongoose.Schema({
     unique: true,
     index: true
   },
+  language: {
+    type: String,
+    enum: ['es', 'en'],
+    default: 'es'
+  },  
   region: {
     type: String,
     required: true,
@@ -88,6 +96,18 @@ userSchema.statics.createUser = function(userData: {
       privateKey: userData.wallet.privateKey,
     }
   });
+};
+
+userSchema.statics.setUserLanguage = function(telegramId: string, language: 'es' | 'en') {
+  return this.findOneAndUpdate(
+    { telegramId },
+    { language },
+    { new: true }
+  );
+};
+
+userSchema.statics.getUserLanguage = function(telegramId: string) {
+  return this.findOne({ telegramId }).select('language');
 };
 
 export default userSchema;

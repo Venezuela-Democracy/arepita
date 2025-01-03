@@ -381,7 +381,7 @@ export class FlowWallet {
         ]
       });
   
-      console.log("Tipo de carta:", cardType);
+      //console.log("Tipo de carta:", cardType);
   
       // Según el tipo, obtenemos la metadata específica
       const metadata = await fcl.query({

@@ -190,7 +190,7 @@ export const collectionActionHandler = async (ctx: BotContext) => {
       // Añadir logs para debug
       console.log('Obteniendo colección para address:', address);
       const collection = await flowWallet.getNFTCollection(address);
-      console.log('Colección obtenida:', JSON.stringify(collection, null, 2));
+      //console.log('Colección obtenida:', JSON.stringify(collection, null, 2));
   
       // Si el tipo es 'main', mostrar el menú principal
       if (type === 'main') {
@@ -227,7 +227,7 @@ export const collectionActionHandler = async (ctx: BotContext) => {
       }
   
       const nft = nfts[numIndex];
-      console.log('NFT a mostrar:', JSON.stringify(nft, null, 2));
+      //console.log('NFT a mostrar:', JSON.stringify(nft, null, 2));
   
       const message = formatNFTMessage(nft, type);
       await ctx.editMessageText(message, {
