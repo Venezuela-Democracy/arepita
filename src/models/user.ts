@@ -20,13 +20,14 @@ interface IUserModel extends Model<IUser> {
   createUser(userData: {
     telegramId: string;
     region: string;
+    language: 'es' | 'en';
     wallet: {
       address: string;
       privateKey: string;
     };
   }): Promise<IUser>;
   setUserLanguage(telegramId: string, language: 'es' | 'en'): Promise<IUser | null>;
-  getUserLanguage(telegramId: string): Promise<IUser | null>;
+  getUserLanguage(telegramId: string): Promise<string>;  // Cambiar el tipo de retorno
 }
 
 // Schema
@@ -83,31 +84,45 @@ userSchema.statics.findByTelegramId = function(telegramId: string) {
 userSchema.statics.createUser = function(userData: {
   telegramId: string;
   region: string;
+  language: 'es' | 'en';
   wallet: {
     address: string;
     privateKey: string;
   };
 }) {
-  return this.create({
-    telegramId: userData.telegramId,
-    region: userData.region,
-    wallet: {
-      address: userData.wallet.address,
-      privateKey: userData.wallet.privateKey,
+  // Usar findOneAndUpdate con upsert
+  return this.findOneAndUpdate(
+    { telegramId: userData.telegramId },
+    {
+      $set: {
+        region: userData.region,
+        language: userData.language,
+        wallet: {
+          address: userData.wallet.address,
+          privateKey: userData.wallet.privateKey,
+          createdAt: new Date()
+        }
+      }
+    },
+    { 
+      new: true, // Retorna el documento actualizado
+      upsert: true // Crea el documento si no existe
     }
-  });
+  );
 };
 
 userSchema.statics.setUserLanguage = function(telegramId: string, language: 'es' | 'en') {
   return this.findOneAndUpdate(
     { telegramId },
     { language },
-    { new: true }
+    { new: true, upsert: true }
   );
 };
 
 userSchema.statics.getUserLanguage = function(telegramId: string) {
-  return this.findOne({ telegramId }).select('language');
+  return this.findOne({ telegramId })
+    .select('language')
+    .then((user: IUser | null) => user?.language || null);
 };
 
 export default userSchema;

@@ -9,13 +9,14 @@ import { statusHandler } from './status';
 import { buyPackHandler } from './buypack';
 import { TelegramGroupManager } from '../managers/group';
 import { collectionActionHandler, collectionHandler } from './colecction';
-import { startHandler } from './start';
+import { languageActionHandler, startHandler } from './start';
 
 export const registerCommands = (bot: Telegraf<BotContext>, groupManager: TelegramGroupManager) => {
     console.log('📝 Registrando comandos y eventos...');
 
     // Comandos básicos
     bot.command([BOT_COMMANDS.START], startHandler);
+    bot.action(/^language:(\w+)$/, languageActionHandler);
     bot.command([BOT_COMMANDS.REGISTER], registerHandler);
     bot.action(/^region:(.+)$/, registerActionHandler(groupManager));
     bot.command(BOT_COMMANDS.COLLECTION, collectionHandler);

@@ -36,6 +36,7 @@ export const registerHandler = async (ctx: BotContext) => {
 
     // Obtener el idioma del usuario (que ya debería estar configurado desde /start)
     const userLanguage = await UserService.getUserLanguage(telegramId) || 'es';
+    console.log('🌍 Idioma del usuario en register:', userLanguage);
     const isRegistered = await UserService.isRegistered(telegramId);
 
     if (isRegistered) {
@@ -46,7 +47,7 @@ export const registerHandler = async (ctx: BotContext) => {
     // Iniciar selección de región
     ctx.session = {
       registrationStep: 'WAITING_REGION',
-      selectedLanguage: userLanguage // Mantener el idioma seleccionado previamente
+      selectedLanguage: userLanguage
     };
 
     await ctx.reply(
@@ -72,6 +73,7 @@ type RegionActionContext = Context & {
 
 export const registerActionHandler = (groupManager: TelegramGroupManager) => async (ctx: RegionActionContext) => {
   try {
+    
     if (!ctx.session || ctx.session.registrationStep !== 'WAITING_REGION') {
       const userLanguage = ctx.session?.selectedLanguage || 'es';
       await ctx.answerCbQuery(MESSAGES[userLanguage].INVALID_SESSION);
@@ -80,7 +82,8 @@ export const registerActionHandler = (groupManager: TelegramGroupManager) => asy
 
     const selectedRegion = ctx.match[1];
     const telegramId = ctx.from?.id.toString();
-    const userLanguage = ctx.session.selectedLanguage || 'es';
+    const userLanguage = await UserService.getUserLanguage(telegramId as string) || 'es';
+    console.log('🌍 Idioma del usuario en registerAction:', userLanguage); // Debug log
 
     if (!telegramId || !ctx.from) {
       await ctx.answerCbQuery(ERROR_MESSAGES[userLanguage].GENERIC);

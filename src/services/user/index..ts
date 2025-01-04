@@ -72,7 +72,10 @@ export class UserService {
   static async isRegistered(telegramId: string): Promise<boolean> {
     try {
       const user = await User.findByTelegramId(telegramId);
-      return !!user;
+      if (!user || !user.wallet || !user.wallet.address) {
+        return false;
+      }
+      return true;
     } catch (error) {
       console.error('Error checking registration:', error);
       throw error;
@@ -148,8 +151,8 @@ export class UserService {
       }
     }
       static async getUserLanguage(telegramId: string): Promise<SupportedLanguage | null> {
-        const user = await User.getUserLanguage(telegramId);
-        return user?.language || null;
+        const language = await User.getUserLanguage(telegramId) as SupportedLanguage;
+        return language || null;
       }
     
       static async setUserLanguage(telegramId: string, language: SupportedLanguage): Promise<void> {

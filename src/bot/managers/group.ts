@@ -48,21 +48,31 @@ export class TelegramGroupManager {
             console.log(`🎉 Iniciando proceso de invitación para usuario ${userId} en estado ${state}`);
 
             const formattedRegion = this.formatRegionForLink(state);
+            const userLanguage = await UserService.getUserLanguage(userId.toString()) || 'es';
 
+            // Mensaje de bienvenida con enlaces fijos según el idioma
+            const welcomeMessages = {
+                es: `🎉 ¡Bienvenido a VzlaDAO!\n\n` +
+                    `Aquí tienes los enlaces para unirte a nuestros grupos:\n\n` +
+                    `• Grupo General: t.me/VzlaDAOGeneral\n` +
+                    `• Grupo ${formattedRegion}: t.me/VzlaDAO${formattedRegion}\n\n` +
+                    `⚠️ Importante:\n` +
+                    `• Debes estar registrado para permanecer en los grupos\n` +
+                    `• Solo podrás estar en el grupo de tu región\n` +
+                    `• El bot verificará tu registro al entrar\n\n` +
+                    `Si tienes alguna duda, escribe /help 💡`,
+                en: `🎉 Welcome to VzlaDAO!\n\n` +
+                    `Here are the links to join our groups:\n\n` +
+                    `• General Group: t.me/VzlaDAOGeneral\n` +
+                    `• ${formattedRegion} Group: t.me/VzlaDAO${formattedRegion}\n\n` +
+                    `⚠️ Important:\n` +
+                    `• You must be registered to stay in the groups\n` +
+                    `• You can only be in your region's group\n` +
+                    `• The bot will verify your registration upon entry\n\n` +
+                    `If you have any questions, type /help 💡`
+            };
 
-            // 1. Mensaje de bienvenida con enlaces fijos
-            await this.bot.telegram.sendMessage(userId, 
-                `🎉 ¡Bienvenido a VzlaDAO!\n\n` +
-                `Aquí tienes los enlaces para unirte a nuestros grupos:\n\n` +
-                `• Grupo General: t.me/VzlaDAOGeneral\n` +
-                `• Grupo ${formattedRegion}: t.me/VzlaDAO${formattedRegion}\n\n` +
-                `⚠️ Importante:\n` +
-                `• Debes estar registrado para permanecer en los grupos\n` +
-                `• Solo podrás estar en el grupo de tu región\n` +
-                `• El bot verificará tu registro al entrar\n\n` +
-                `Si tienes alguna duda, escribe /help 💡`
-            );
-
+            await this.bot.telegram.sendMessage(userId, welcomeMessages[userLanguage]);
             console.log(`✅ Enlaces enviados al usuario ${userId}`);
 
         } catch (error) {
@@ -74,6 +84,7 @@ export class TelegramGroupManager {
     async verifyMember(chatId: number, userId: number) {
         try {
             console.log(`🔍 Verificando miembro ${userId} en chat ${chatId}`);
+            const userLanguage = await UserService.getUserLanguage(userId.toString()) || 'es';
             
             // 1. Verificar si el usuario está registrado
             const isRegistered = await UserService.isRegistered(userId.toString());
@@ -82,10 +93,15 @@ export class TelegramGroupManager {
                 console.log(`❌ Usuario ${userId} no registrado, expulsando...`);
                 await this.bot.telegram.banChatMember(chatId, userId);
                 await this.bot.telegram.unbanChatMember(chatId, userId);
-                await this.bot.telegram.sendMessage(userId, 
-                    `⚠️ Has sido removido del grupo porque no estás registrado.\n` +
-                    `Por favor, usa /register para registrarte primero.`
-                );
+                
+                const notRegisteredMessages = {
+                    es: `⚠️ Has sido removido del grupo porque no estás registrado.\n` +
+                        `Por favor, usa /register para registrarte primero.`,
+                    en: `⚠️ You have been removed from the group because you are not registered.\n` +
+                        `Please use /register to register first.`
+                };
+                
+                await this.bot.telegram.sendMessage(userId, notRegisteredMessages[userLanguage]);
                 return false;
             }
     
@@ -94,7 +110,6 @@ export class TelegramGroupManager {
                 const userRegion = await UserService.getRegion(userId.toString());
                 const chat = await this.bot.telegram.getChat(chatId) as Chat.GroupChat | Chat.SupergroupChat;
                 
-                // Normalizar los nombres para la comparación
                 const normalizedTitle = this.normalizeRegionName(chat.title);
                 const normalizedRegion = this.normalizeRegionName(userRegion || '');
                 
@@ -102,15 +117,19 @@ export class TelegramGroupManager {
                     console.log(`❌ Usuario ${userId} en grupo regional incorrecto, expulsando...`);
                     await this.bot.telegram.banChatMember(chatId, userId);
                     await this.bot.telegram.unbanChatMember(chatId, userId);
-                    await this.bot.telegram.sendMessage(userId,
-                        `⚠️ Has sido removido porque este no es el grupo de tu región.\n` +
-                        `Tu región registrada es: ${userRegion}`
-                    );
+                    
+                    const wrongRegionMessages = {
+                        es: `⚠️ Has sido removido porque este no es el grupo de tu región.\n` +
+                            `Tu región registrada es: ${userRegion}`,
+                        en: `⚠️ You have been removed because this is not your region's group.\n` +
+                            `Your registered region is: ${userRegion}`
+                    };
+                    
+                    await this.bot.telegram.sendMessage(userId, wrongRegionMessages[userLanguage]);
                     return false;
                 }
             }
     
-            // 3. Si todo está bien, aplicar restricciones
             await this.restrictNewMember(chatId, userId);
             return true;
     
