@@ -88,6 +88,29 @@ The platform will introduce an immersive narrative experience that includes:
 - Telegram webhook verification
 - Smart contract access control
 
+## 🔄 System Architecture
+
+mermaid
+graph TD
+subgraph Telegram Layer
+T[Telegram Users] -->|Commands| B[Telegram Bot]
+B -->|Webhook| API[Express API]
+end
+subgraph Backend Services
+API -->|Process Commands| H[Command Handler]
+H -->|User Management| DB[(MongoDB)]
+H -->|Blockchain Ops| FCL[Flow Client Library]
+end
+subgraph Flow Blockchain
+FCL -->|Transactions| F[Flow Network]
+F -->|NFT Operations| NFT[VenezuelaDAO NFTs]
+F -->|State Changes| State[Game State]
+end
+style F fill:#00ef8b,stroke:#333,stroke-width:2px
+style FCL fill:#00ef8b,stroke:#333,stroke-width:2px
+style NFT fill:#00ef8b,stroke:#333,stroke-width:2px
+
+
 ## 🚀 Getting Started
 
 ### Prerequisites
