@@ -23,6 +23,7 @@ export class UserService {
    */
   static async createUser(userData: {
     telegramId: string;
+    language: SupportedLanguage;
     region: VenezuelaRegion;
     wallet: {
       address: string;

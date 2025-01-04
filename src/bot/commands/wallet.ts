@@ -7,32 +7,43 @@ export const walletHandler = async (ctx: BotContext) => {
     const telegramId = ctx.from?.id.toString();
     
     if (!telegramId || !ctx.from || !ctx.chat) {
-      await ctx.reply(ERROR_MESSAGES.GENERIC);
+      await ctx.reply(ERROR_MESSAGES.es.GENERIC);
       return;
     }
+
+    // Obtener el idioma del usuario
+    const userLanguage = await UserService.getUserLanguage(telegramId) || 'es';
 
     const address = await UserService.getWalletAddress(telegramId);
     
     if (!address) {
-      await ctx.reply(ERROR_MESSAGES.NOT_REGISTERED);
+      await ctx.reply(ERROR_MESSAGES[userLanguage].NOT_REGISTERED);
       return;
     }
 
-    const walletInfo = `🔐 Información de tu wallet:\n\n` +
-                      `📫 Dirección: ${address}\n\n` +
-                      `⚠️ Nunca compartas información sensible.`;
+    // Usar el mensaje de wallet details con el idioma del usuario
+    const walletInfo = MESSAGES[userLanguage].WALLET_DETAILS
+      .replace('{address}', address);
 
     if (ctx.chat.type !== 'private') {
-      await ctx.reply(MESSAGES.WALLET_INFO);
+      // Si no es chat privado, enviar mensaje de privacidad y la info por privado
+      await ctx.reply(MESSAGES[userLanguage].WALLET_INFO);
       await ctx.telegram.sendMessage(
         ctx.from.id,
-        walletInfo
+        walletInfo,
+        { parse_mode: 'Markdown' }
       );
     } else {
-      await ctx.reply(walletInfo);
+      // Si es chat privado, enviar la info directamente
+      await ctx.reply(walletInfo, { parse_mode: 'Markdown' });
     }
+
+    await UserService.updateLastActive(telegramId);
   } catch (error) {
     console.error('Error obteniendo info de wallet:', error);
-    await ctx.reply(ERROR_MESSAGES.GENERIC);
+    const userLanguage = ctx.from?.id ? 
+      await UserService.getUserLanguage(ctx.from.id.toString()) || 'es' 
+      : 'es';
+    await ctx.reply(ERROR_MESSAGES[userLanguage].GENERIC);
   }
 };

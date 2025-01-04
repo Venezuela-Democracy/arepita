@@ -1,6 +1,6 @@
 import { Markup } from 'telegraf';
 import { BotContext } from '../types';
-import { ERROR_MESSAGES } from '../constants';
+import { ERROR_MESSAGES, MESSAGES } from '../constants';
 import { VENEZUELA_REGIONS, VENEZUELA_REGIONS_DISPLAY } from '../regions';
 import { UserService } from '../../services';
 import { FlowWallet } from '../../wallet';
@@ -30,30 +30,28 @@ export const registerHandler = async (ctx: BotContext) => {
     const telegramId = ctx.from?.id.toString();
     
     if (!telegramId) {
-      await ctx.reply(ERROR_MESSAGES.GENERIC);
+      await ctx.reply(ERROR_MESSAGES.es.GENERIC);
       return;
     }
 
+    // Obtener el idioma del usuario (que ya debería estar configurado desde /start)
+    const userLanguage = await UserService.getUserLanguage(telegramId) || 'es';
     const isRegistered = await UserService.isRegistered(telegramId);
 
     if (isRegistered) {
-      await ctx.reply(ERROR_MESSAGES.ALREADY_REGISTERED);
+      await ctx.reply(ERROR_MESSAGES[userLanguage].ALREADY_REGISTERED);
       return;
     }
 
+    // Iniciar selección de región
     ctx.session = {
-      registrationStep: 'WAITING_REGION'
+      registrationStep: 'WAITING_REGION',
+      selectedLanguage: userLanguage // Mantener el idioma seleccionado previamente
     };
 
     await ctx.reply(
-        `🗺 *¡Bienvenido al registro de VenezuelaDAO!*
-
-        🔸 *Proceso de registro:*
-          1️⃣ Seleccionar tu región
-          2️⃣ Crear tu wallet de Flow
-          3️⃣ ¡Listo para comprar NFTs!
-        
-        Por favor, selecciona tu región de Venezuela:`,
+      MESSAGES[userLanguage].REGISTER_START + '\n\n' +
+      MESSAGES[userLanguage].SELECT_REGION,
       {
         parse_mode: 'Markdown',
         ...getRegionsKeyboard()
@@ -61,71 +59,80 @@ export const registerHandler = async (ctx: BotContext) => {
     );
   } catch (error) {
     console.error('Error en comando register:', error);
-    await ctx.reply(ERROR_MESSAGES.GENERIC);
+    const userLanguage = ctx.from?.id ? 
+      await UserService.getUserLanguage(ctx.from.id.toString()) || 'es' 
+      : 'es';
+    await ctx.reply(ERROR_MESSAGES[userLanguage].GENERIC);
   }
 };
 
-// Extendemos el tipo Context para incluir el match
 type RegionActionContext = Context & {
   match: RegExpExecArray;
 } & BotContext;
 
 export const registerActionHandler = (groupManager: TelegramGroupManager) => async (ctx: RegionActionContext) => {
-    try {
-        if (!ctx.session || ctx.session.registrationStep !== 'WAITING_REGION') {
-            await ctx.answerCbQuery('Sesión inválida. Por favor, inicia el registro nuevamente.');
-            return;
-        }
-
-        const selectedRegion = ctx.match[1];
-        const telegramId = ctx.from?.id.toString();
-
-        if (!telegramId || !ctx.from) {
-            await ctx.answerCbQuery('Error: ID de usuario no encontrado');
-            return;
-        }
-
-        await ctx.answerCbQuery(`Has seleccionado: ${VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY]}`);
-
-        await ctx.editMessageText(
-            `🎯 Has seleccionado: *${VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY]}*\n\n` +
-            'Procesando registro y añadiéndote a los grupos...',
-            { parse_mode: 'Markdown' }
-        );
-
-        const wallet = await flowWallet.createWallet();
-        
-        await UserService.createUser({
-            telegramId,
-            region: selectedRegion as VenezuelaRegion,
-            wallet: {
-                address: wallet.address,
-                privateKey: wallet.privateKey
-            }
-        });
-
-        // Añadir usuario a los grupos
-        await groupManager.addUserToGroups(ctx.from.id, selectedRegion);
-
-        ctx.session.registrationStep = 'COMPLETED';
-        ctx.session.selectedRegion = selectedRegion as VenezuelaRegion;
-
-        await ctx.editMessageText(
-            `✅ ¡Registro exitoso!\n\n` +
-            `🏠 Región: ${VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY]}\n` +
-            `💫 Tu wallet ha sido creada exitosamente\n` +
-            `👥 Te he enviado los enlaces de los grupos por mensaje privado\n\n` +
-            `Usa /help para ver los comandos disponibles.`
-        );
-
-        await ctx.telegram.sendMessage(
-            ctx.from.id,
-            `🔐 Guarda esta información en un lugar seguro:\n\n` +
-            `📫 Dirección: ${wallet.address}\n`
-        );
-
-    } catch (error) {
-        console.error('Error en registro:', error);
-        await ctx.editMessageText(ERROR_MESSAGES.GENERIC);
+  try {
+    if (!ctx.session || ctx.session.registrationStep !== 'WAITING_REGION') {
+      const userLanguage = ctx.session?.selectedLanguage || 'es';
+      await ctx.answerCbQuery(MESSAGES[userLanguage].INVALID_SESSION);
+      return;
     }
+
+    const selectedRegion = ctx.match[1];
+    const telegramId = ctx.from?.id.toString();
+    const userLanguage = ctx.session.selectedLanguage || 'es';
+
+    if (!telegramId || !ctx.from) {
+      await ctx.answerCbQuery(ERROR_MESSAGES[userLanguage].GENERIC);
+      return;
+    }
+
+    await ctx.answerCbQuery(
+      MESSAGES[userLanguage].REGION_SELECTED
+        .replace('{region}', VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY])
+    );
+
+    await ctx.editMessageText(
+      MESSAGES[userLanguage].PROCESSING_REGISTRATION
+        .replace('{region}', VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY]),
+      { parse_mode: 'Markdown' }
+    );
+
+    const wallet = await flowWallet.createWallet();
+    
+    // Crear usuario con el idioma ya seleccionado
+    await UserService.createUser({
+      telegramId,
+      region: selectedRegion as VenezuelaRegion,
+      language: userLanguage,
+      wallet: {
+        address: wallet.address,
+        privateKey: wallet.privateKey
+      }
+    });
+
+    // Añadir usuario a los grupos
+    await groupManager.addUserToGroups(ctx.from.id, selectedRegion);
+
+    ctx.session.registrationStep = 'COMPLETED';
+    ctx.session.selectedRegion = selectedRegion as VenezuelaRegion;
+
+    await ctx.editMessageText(
+      MESSAGES[userLanguage].REGISTER_SUCCESS
+        .replace('{region}', VENEZUELA_REGIONS_DISPLAY[selectedRegion as keyof typeof VENEZUELA_REGIONS_DISPLAY]),
+      { parse_mode: 'Markdown' }
+    );
+
+    await ctx.telegram.sendMessage(
+      ctx.from.id,
+      MESSAGES[userLanguage].WALLET_DETAILS
+        .replace('{address}', wallet.address),
+      { parse_mode: 'Markdown' }
+    );
+
+  } catch (error) {
+    console.error('Error en registro:', error);
+    const userLanguage = ctx.session?.selectedLanguage || 'es';
+    await ctx.editMessageText(ERROR_MESSAGES[userLanguage].GENERIC);
+  }
 };

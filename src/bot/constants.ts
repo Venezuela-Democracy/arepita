@@ -101,11 +101,7 @@ Total: {total} NFTs
 📝 *Proceso de Registro*
 Vamos a crear tu wallet en Flow.
 Por favor, sigue los siguientes pasos:`,
-    REGISTER_SUCCESS: `
-✅ *¡Registro Completado!*
-Tu wallet ha sido creada exitosamente.
 
-💡 Usa /help para ver todos los comandos disponibles.`,
     STATUS_NOT_REGISTERED: `
 🟢 *Estado del Sistema*
 
@@ -117,6 +113,54 @@ Tu wallet ha sido creada exitosamente.
 👤 *Tu Información*
 🏠 Región: {region}
 ✅ Bot funcionando correctamente`,
+SELECT_REGION: '🗺 Por favor, selecciona tu región de Venezuela:',
+INVALID_SESSION: 'Sesión inválida. Por favor, inicia el registro nuevamente.',
+REGION_SELECTED: 'Has seleccionado: {region}',
+PROCESSING_REGISTRATION: `🎯 Has seleccionado: *{region}*\n\nProcesando registro y añadiéndote a los grupos...`,
+REGISTER_SUCCESS: `✅ ¡Registro exitoso!\n\n
+🏠 Región: {region}
+💫 Tu wallet ha sido creada exitosamente
+👥 Te he enviado los enlaces de los grupos por mensaje privado\n
+Usa /help para ver los comandos disponibles.`,
+WALLET_DETAILS: `🔐 Guarda esta información en un lugar seguro:\n\n📫 Dirección: {address}\n`,
+NOT_REGISTERED_BUY_PACK: `
+❌ *No estás registrado*
+
+Para comprar packs necesitas:
+1️⃣ Registrarte en VenezuelaDAO
+2️⃣ Tener una wallet de Flow
+
+➡️ Usa /register para comenzar`,
+    BUYING_PACK_PROCESSING: `
+🎁 *Comprando Pack de NFTs*
+
+⏳ Procesando tu transacción...
+_Este proceso puede tomar unos segundos._`,
+    BUY_PACK_ERROR: 'Error en la compra del pack. Estado: {status}',
+    BUY_PACK_EVENT_NOT_FOUND: 'No se encontró el evento de compra del pack',
+    PACK_BOUGHT_WAITING_BLOCKS: `
+✨ *Pack comprado exitosamente*
+
+⏳ _Esperando bloques necesarios para revelar..._
+Bloque actual: {currentBlock}
+Bloque necesario: {commitBlock}
+
+Te notificaré cuando pueda ser revelado.`,
+    WAIT_TIME_EXCEEDED: 'Tiempo de espera agotado. Por favor, intenta revelar el pack más tarde.',
+    REVEALING_PACK: `
+🎉 *¡Revelando pack!*
+
+⏳ _Procesando revelación..._`,
+    REVEAL_PACK_ERROR: 'Error al revelar el pack. Estado: {status}',
+    REVEAL_EVENT_NOT_FOUND: 'No se pudo obtener la información del NFT revelado',
+    UNKNOWN_ERROR: 'Error desconocido',
+    BUY_PACK_ERROR_MESSAGE: `
+❌ *Error en la operación*
+
+{error}
+
+Por favor, intenta nuevamente en unos momentos.
+Si el problema persiste, contacta a soporte.`,
   },
 
   en: {
@@ -192,11 +236,6 @@ Total: {total} NFTs
 📝 *Registration Process*
 We'll create your Flow wallet.
 Please follow these steps:`,
-    REGISTER_SUCCESS: `
-✅ *Registration Completed!*
-Your wallet has been created successfully.
-
-💡 Use /help to see all available commands.`,
     STATUS_NOT_REGISTERED: `
 🟢 *System Status*
 
@@ -208,5 +247,53 @@ Your wallet has been created successfully.
 👤 *Your Information*
 🏠 Region: {region}
 ✅ Bot working correctly`,
-  }
+SELECT_REGION: '🗺 Please select your region in Venezuela:',
+INVALID_SESSION: 'Invalid session. Please start the registration again.',
+REGION_SELECTED: 'You selected: {region}',
+PROCESSING_REGISTRATION: `🎯 You selected: *{region}*\n\nProcessing registration and adding you to groups...`,
+REGISTER_SUCCESS: `✅ Registration successful!\n\n
+🏠 Region: {region}
+💫 Your wallet has been created successfully
+👥 I've sent you the group links via private message\n
+Use /help to see available commands.`,
+WALLET_DETAILS: `🔐 Save this information in a safe place:\n\n📫 Address: {address}\n`,
+NOT_REGISTERED_BUY_PACK: `
+❌ *You are not registered*
+
+To buy packs you need:
+1️⃣ Register in VenezuelaDAO
+2️⃣ Have a Flow wallet
+
+➡️ Use /register to start`,
+    BUYING_PACK_PROCESSING: `
+🎁 *Buying NFT Pack*
+
+⏳ Processing your transaction...
+_This process may take a few seconds._`,
+    BUY_PACK_ERROR: 'Error buying the pack. Status: {status}',
+    BUY_PACK_EVENT_NOT_FOUND: 'Pack purchase event not found',
+    PACK_BOUGHT_WAITING_BLOCKS: `
+✨ *Pack successfully purchased*
+
+⏳ _Waiting for required blocks to reveal..._
+Current block: {currentBlock}
+Required block: {commitBlock}
+
+I'll notify you when it can be revealed.`,
+    WAIT_TIME_EXCEEDED: 'Wait time exceeded. Please try to reveal the pack later.',
+    REVEALING_PACK: `
+🎉 *Revealing pack!*
+
+⏳ _Processing revelation..._`,
+    REVEAL_PACK_ERROR: 'Error revealing the pack. Status: {status}',
+    REVEAL_EVENT_NOT_FOUND: 'Could not get revealed NFT information',
+    UNKNOWN_ERROR: 'Unknown error',
+    BUY_PACK_ERROR_MESSAGE: `
+❌ *Operation Error*
+
+{error}
+
+Please try again in a few moments.
+If the problem persists, contact support.`,  
+}
 } as const;

@@ -1,45 +1,36 @@
 import { BotContext } from '../types';
-import { ERROR_MESSAGES } from '../constants';
+import { ERROR_MESSAGES, MESSAGES } from '../constants';
 import { FlowWallet } from '../../wallet';
 import { UserService } from '../../services';
 import * as fcl from "@onflow/fcl";
 
-const MAX_WAIT_TIME = 3 * 60 * 1000; // 5 minutos en milisegundos
+const MAX_WAIT_TIME = 3 * 60 * 1000; // 3 minutos en milisegundos
 
 export async function buyPackHandler(ctx: BotContext) {
   try {
     const telegramId = ctx.from?.id.toString();
     if (!telegramId) {
-      await ctx.reply(ERROR_MESSAGES.GENERIC);
+      await ctx.reply(ERROR_MESSAGES.es.GENERIC);
       return;
     }
+
+    const userLanguage = await UserService.getUserLanguage(telegramId) || 'es';
 
     // Verificar que el usuario esté registrado
     const isRegistered = await UserService.isRegistered(telegramId);
     if (!isRegistered) {
-      await ctx.reply(`
-❌ *No estás registrado*
-
-Para comprar packs necesitas:
-1️⃣ Registrarte en VenezuelaDAO
-2️⃣ Tener una wallet de Flow
-
-➡️ Usa /register para comenzar`, 
+      await ctx.reply(MESSAGES[userLanguage].NOT_REGISTERED_BUY_PACK, 
       { parse_mode: 'Markdown' });
       return;
     }
 
-    const processingMessage = await ctx.reply(`
-🎁 *Comprando Pack de NFTs*
-
-⏳ Procesando tu transacción...
-_Este proceso puede tomar unos segundos._`, 
+    const processingMessage = await ctx.reply(MESSAGES[userLanguage].BUYING_PACK_PROCESSING, 
     { parse_mode: 'Markdown' });
 
     // Obtener datos de autenticación del usuario
     const authData = await UserService.getFlowAuthData(telegramId);
     if (!authData) {
-      await ctx.reply(ERROR_MESSAGES.GENERIC);
+      await ctx.reply(ERROR_MESSAGES[userLanguage].GENERIC);
       return;
     }
 
@@ -54,7 +45,7 @@ _Este proceso puede tomar unos segundos._`,
     const buyTxStatus = await fcl.tx(buyTxId).onceSealed();
     
     if (buyTxStatus.status !== 4) {
-      throw new Error(`Error en la compra del pack. Estado: ${buyTxStatus.status}`);
+      throw new Error(MESSAGES[userLanguage].BUY_PACK_ERROR.replace('{status}', buyTxStatus.status.toString()));
     }
 
     // Obtener el evento BoughtPack
@@ -63,7 +54,7 @@ _Este proceso puede tomar unos segundos._`,
     );
 
     if (!boughtPackEvent) {
-      throw new Error('No se encontró el evento de compra del pack');
+      throw new Error(MESSAGES[userLanguage].BUY_PACK_EVENT_NOT_FOUND);
     }
 
     const commitBlock = boughtPackEvent.data.commitBlock;
@@ -72,15 +63,12 @@ _Este proceso puede tomar unos segundos._`,
     console.log(`Bloque actual: ${currentBlock.height}, Bloque necesario: ${commitBlock}`);
 
     if (currentBlock.height < commitBlock) {
-      await ctx.reply(`
-✨ *Pack comprado exitosamente*
-
-⏳ _Esperando bloques necesarios para revelar..._
-Bloque actual: ${currentBlock.height}
-Bloque necesario: ${commitBlock}
-
-Te notificaré cuando pueda ser revelado.`, 
-      { parse_mode: 'Markdown' });
+      await ctx.reply(
+        MESSAGES[userLanguage].PACK_BOUGHT_WAITING_BLOCKS
+          .replace('{currentBlock}', currentBlock.height.toString())
+          .replace('{commitBlock}', commitBlock.toString()),
+        { parse_mode: 'Markdown' }
+      );
 
       // Esperar a que llegue al bloque necesario
       const startTime = Date.now();
@@ -88,7 +76,7 @@ Te notificaré cuando pueda ser revelado.`,
 
       while (lastBlock < commitBlock) {
         if (Date.now() - startTime > MAX_WAIT_TIME) {
-          throw new Error('Tiempo de espera agotado. Por favor, intenta revelar el pack más tarde.');
+          throw new Error(MESSAGES[userLanguage].WAIT_TIME_EXCEEDED);
         }
 
         await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5 segundos
@@ -102,10 +90,7 @@ Te notificaré cuando pueda ser revelado.`,
     console.log('Esperando 10 segundos adicionales para asegurar disponibilidad del receipt...');
     await new Promise(resolve => setTimeout(resolve, 25000));
 
-    await ctx.reply(`
-🎉 *¡Revelando pack!*
-
-⏳ _Procesando revelación..._`, 
+    await ctx.reply(MESSAGES[userLanguage].REVEALING_PACK, 
     { parse_mode: 'Markdown' });
 
     // 2. Revelar el pack
@@ -118,7 +103,7 @@ Te notificaré cuando pueda ser revelado.`,
     const revealTxStatus = await fcl.tx(revealTxId).onceSealed();
     
     if (revealTxStatus.status !== 4) {
-      throw new Error(`Error al revelar el pack. Estado: ${revealTxStatus.status}`);
+      throw new Error(MESSAGES[userLanguage].REVEAL_PACK_ERROR.replace('{status}', revealTxStatus.status.toString()));
     }
 
     // Buscar el evento de revelación para obtener el ID del NFT
@@ -126,84 +111,128 @@ Te notificaré cuando pueda ser revelado.`,
     const revealEvent = events.find((e: any) => e.type.includes('PackRevealed'));
 
     if (revealEvent) {
-        const nftID = revealEvent.data.cardID;
-        const { cardType, metadata } = await wallet.getNFTMetadata(nftID);
-        console.log(JSON.stringify(metadata, null, 2));
-        let message = `🎉 *¡NUEVA CARTA!*\n\n`;
-        message += `[⚜️](${metadata.image}) *${metadata.name}*\n`;
-        message += `━━━━━━━━━━━━━━━\n\n`;
-      
-        switch (cardType) {
-          case 'A.826dae42290107c3.VenezuelaNFT_13.LocationCard':
-            message += `📍 *UBICACIÓN*\n`;
-            message += `🌎 Región: ${metadata.region}\n`;
-            message += `━━━━ ESTADÍSTICAS ━━━━\n`;
-            message += `⚡ Poder de Influencia: ${metadata.influencePointsGeneration}/día\n`;
-            message += `🏗️ Desarrollo Regional: ${metadata.regionalGeneration}/día\n`;
-            message += `🎯 Especialidad: ${metadata.type}\n`;
-            break;
-      
-          case 'A.826dae42290107c3.VenezuelaNFT_13.CharacterCard':
-            message += `👤 *PERSONAJE*\n`;
-            message += `🎭 Clase: ${metadata.characterTypes.join(' / ')}\n`;
-            message += `━━━━ ESTADÍSTICAS ━━━━\n`;
-            message += `⚡ Influencia: ${metadata.influencePointsGeneration}/día\n`;
-            message += `💰 Costo de Campaña: ${metadata.launchCost}\n\n`;
-            
-            if (metadata.presidentEffects) {
-              message += `👑 *HABILIDADES DE LIDERAZGO*\n`;
-              if (Object.keys(metadata.presidentEffects.effectCostReduction).length > 0) {
-                Object.entries(metadata.presidentEffects.effectCostReduction).forEach(([key, value]) => {
-                  message += `• ${key}: -${value}%\n`;
-                });
-              }
-              if (Object.keys(metadata.presidentEffects.developmentEffect).length > 0) {
-                Object.entries(metadata.presidentEffects.developmentEffect).forEach(([key, value]) => {
-                  message += `• ${key}: +${value}%\n`;
-                });
-              }
-            }
-            break;
-      
-          case 'A.826dae42290107c3.VenezuelaNFT_13.CulturalItemCard':
-            message += `🎨 *ITEM CULTURAL*\n`;
-            message += `🎯 Categoría: ${metadata.type}\n`;
-            message += `━━━━ ESTADÍSTICAS ━━━━\n`;
-            message += `⚡ Influencia: ${metadata.influencePointsGeneration}/día\n\n`;
-            
-            if (metadata.specialEffects && Object.keys(metadata.specialEffects.votingEffect).length > 0) {
-              message += `🗳️ *EFECTOS*\n`;
-              Object.entries(metadata.specialEffects.votingEffect).forEach(([key, value]) => {
-                message += `• ${key}: +${value}%\n`;
-              });
-            }
-            break;
-        }
-      
-        message += `\n━━━━━━━━━━━━━━━\n`;
-        message += `💡 _Usa /collection para ver tu colección_`;
-      
-        await ctx.reply(message, { 
-          parse_mode: 'Markdown'
-        });
-    }else {
-      throw new Error('No se pudo obtener la información del NFT revelado');
+      const nftID = revealEvent.data.cardID;
+      const { cardType, metadata } = await wallet.getNFTMetadata(nftID);
+      console.log(JSON.stringify(metadata, null, 2));
+
+      const message = formatNFTRevealMessage(metadata, cardType, userLanguage);
+      await ctx.reply(message, { parse_mode: 'Markdown' });
+    } else {
+      throw new Error(MESSAGES[userLanguage].REVEAL_EVENT_NOT_FOUND);
     }
 
-  } catch (error: any  ) {
+  } catch (error: any) {
     console.error('Error en buyPack command:', error);
     
+    const userLanguage = ctx.from?.id ? 
+      await UserService.getUserLanguage(ctx.from.id.toString()) || 'es' 
+      : 'es';
+
     // Sanitizar mensaje de error para Markdown
-    let errorMessage = error.message || 'Error desconocido';
+    let errorMessage = error.message || MESSAGES[userLanguage].UNKNOWN_ERROR;
     errorMessage = errorMessage.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
 
-    await ctx.reply(`
-❌ *Error en la operación*
-
-${errorMessage}
-
-Por favor, intenta nuevamente en unos momentos.
-Si el problema persiste, contacta a soporte.`, 
-    { parse_mode: 'Markdown' });
+    await ctx.reply(
+      MESSAGES[userLanguage].BUY_PACK_ERROR_MESSAGE
+        .replace('{error}', errorMessage), 
+      { parse_mode: 'Markdown' }
+    );
   }
+}
+
+function formatNFTRevealMessage(metadata: any, cardType: string, userLanguage: 'es' | 'en'): string {
+  const labels = {
+    es: {
+      newCard: '🎉 ¡NUEVA CARTA!',
+      location: 'UBICACIÓN',
+      region: 'Región',
+      stats: 'ESTADÍSTICAS',
+      influence: 'Poder de Influencia',
+      development: 'Desarrollo Regional',
+      specialty: 'Especialidad',
+      character: 'PERSONAJE',
+      class: 'Clase',
+      influence_gen: 'Influencia',
+      campaign_cost: 'Costo de Campaña',
+      leadership: 'HABILIDADES DE LIDERAZGO',
+      cultural: 'ITEM CULTURAL',
+      category: 'Categoría',
+      effects: 'EFECTOS',
+      viewCollection: '💡 Usa /collection para ver tu colección'
+    },
+    en: {
+      newCard: '🎉 NEW CARD!',
+      location: 'LOCATION',
+      region: 'Region',
+      stats: 'STATISTICS',
+      influence: 'Influence Power',
+      development: 'Regional Development',
+      specialty: 'Specialty',
+      character: 'CHARACTER',
+      class: 'Class',
+      influence_gen: 'Influence',
+      campaign_cost: 'Campaign Cost',
+      leadership: 'LEADERSHIP ABILITIES',
+      cultural: 'CULTURAL ITEM',
+      category: 'Category',
+      effects: 'EFFECTS',
+      viewCollection: '💡 Use /collection to view your collection'
+    }
+  };
+
+  let message = `${labels[userLanguage].newCard}\n\n`;
+  message += `[⚜️](${metadata.image}) *${metadata.name}*\n`;
+  message += `━━━━━━━━━━━━━━━\n\n`;
+
+  switch (cardType) {
+    case 'A.826dae42290107c3.VenezuelaNFT_13.LocationCard':
+      message += `📍 *${labels[userLanguage].location}*\n`;
+      message += `🌎 ${labels[userLanguage].region}: ${metadata.region}\n`;
+      message += `━━━━ ${labels[userLanguage].stats} ━━━━\n`;
+      message += `⚡ ${labels[userLanguage].influence}: ${metadata.influencePointsGeneration}/día\n`;
+      message += `🏗️ ${labels[userLanguage].development}: ${metadata.regionalGeneration}/día\n`;
+      message += `🎯 ${labels[userLanguage].specialty}: ${metadata.type}\n`;
+      break;
+
+    case 'A.826dae42290107c3.VenezuelaNFT_13.CharacterCard':
+      message += `👤 *${labels[userLanguage].character}*\n`;
+      message += `🎭 ${labels[userLanguage].class}: ${metadata.characterTypes.join(' / ')}\n`;
+      message += `━━━━ ${labels[userLanguage].stats} ━━━━\n`;
+      message += `⚡ ${labels[userLanguage].influence_gen}: ${metadata.influencePointsGeneration}/día\n`;
+      message += `💰 ${labels[userLanguage].campaign_cost}: ${metadata.launchCost}\n\n`;
+      
+      if (metadata.presidentEffects) {
+        message += `👑 *${labels[userLanguage].leadership}*\n`;
+        if (Object.keys(metadata.presidentEffects.effectCostReduction).length > 0) {
+          Object.entries(metadata.presidentEffects.effectCostReduction).forEach(([key, value]) => {
+            message += `• ${key}: -${value}%\n`;
+          });
+        }
+        if (Object.keys(metadata.presidentEffects.developmentEffect).length > 0) {
+          Object.entries(metadata.presidentEffects.developmentEffect).forEach(([key, value]) => {
+            message += `• ${key}: +${value}%\n`;
+          });
+        }
+      }
+      break;
+
+    case 'A.826dae42290107c3.VenezuelaNFT_13.CulturalItemCard':
+      message += `🎨 *${labels[userLanguage].cultural}*\n`;
+      message += `🎯 ${labels[userLanguage].category}: ${metadata.type}\n`;
+      message += `━━━━ ${labels[userLanguage].stats} ━━━━\n`;
+      message += `⚡ ${labels[userLanguage].influence_gen}: ${metadata.influencePointsGeneration}/día\n\n`;
+      
+      if (metadata.specialEffects && Object.keys(metadata.specialEffects.votingEffect).length > 0) {
+        message += `🗳️ *${labels[userLanguage].effects}*\n`;
+        Object.entries(metadata.specialEffects.votingEffect).forEach(([key, value]) => {
+          message += `• ${key}: +${value}%\n`;
+        });
+      }
+      break;
+  }
+
+  message += `\n━━━━━━━━━━━━━━━\n`;
+  message += `${labels[userLanguage].viewCollection}`;
+
+  return message;
 }
