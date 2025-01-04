@@ -200,10 +200,6 @@ Special thanks to:
 ## 📞 Contact & Community
 
 - Telegram: [@VenezuelaDAOBot](https://t.me/VenezuelaDAOBot)
-- Twitter: [@VenezuelaDAO](https://twitter.com/VenezuelaDAO)
-- Discord: [Join our server](https://discord.gg/venezueladao)
-- Email: contact@venezueladao.com
-- Blog: [Medium](https://medium.com/venezueladao)
 
 ### Regional Communities
 - Caracas: [@VDAOCaracas](https://t.me/VDAOCaracas)
