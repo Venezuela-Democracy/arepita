@@ -2,13 +2,20 @@ import { Context } from 'telegraf';
 import { BOT_COMMANDS } from './constants';
 import { VENEZUELA_REGIONS } from './regions';
 
-// Definir estados posibles de registro
-export type RegistrationStep = 'WAITING_REGION' | 'COMPLETED';
+export type SupportedLanguage = 'es' | 'en';
 
+
+// Definir estados posibles de registro
+export type RegistrationStep = 
+  | 'WAITING_LANGUAGE' 
+  | 'WAITING_REGION'
+  | 'WAITING_WALLET'
+  | 'COMPLETED';
 // Definir estructura de la sesión
 export interface BotSession {
   registrationStep?: RegistrationStep;
   selectedRegion?: keyof typeof VENEZUELA_REGIONS;
+  selectedLanguage?: SupportedLanguage;
 }
 
 // Extender el contexto con nuestra sesión

@@ -1,9 +1,10 @@
 import { Telegraf, session } from 'telegraf'; // Añadir importación de session
 import { BotContext, CommandValue } from './types';
 import { registerCommands } from './commands';
-import { BOT_COMMANDS, ERROR_MESSAGES } from './constants';
+import { BOT_COMMANDS, ERROR_MESSAGES, MESSAGES } from './constants';
 import { formatMessage, isValidCommand } from './utils';
 import { TelegramGroupManager } from './managers/group';
+import { UserService } from '../services/user/index.';
 
 export class TelegramBot {
   private bot: Telegraf<BotContext>;
@@ -40,29 +41,40 @@ export class TelegramBot {
       try {
         const message = formatMessage(ctx.message.text);
         const commands = Object.values(BOT_COMMANDS) as CommandValue[];
+        const telegramId = ctx.from?.id.toString();
+
+        if (!telegramId) return;
+        const userLanguage = await UserService.getUserLanguage(telegramId) || 'es';
+
 
         // Si es un comando no registrado
         if (isValidCommand(message) && !commands.includes(message.slice(1) as CommandValue)) {
-          await ctx.reply(ERROR_MESSAGES.INVALID_COMMAND);
+          await ctx.reply(ERROR_MESSAGES[userLanguage].INVALID_COMMAND);
           return;
         }
 
         // Si es un mensaje normal
         if (!isValidCommand(message)) {
-          await ctx.reply(`Recibí tu mensaje: ${message}`);
+          await ctx.reply(`${MESSAGES[userLanguage].RECEIVED_MESSAGE}: ${message}`);
         }
 
       } catch (error) {
         console.error('❌ Error handling message:', error);
-        await ctx.reply(ERROR_MESSAGES.GENERIC);
+        const userLanguage = ctx.from?.id ? 
+          await UserService.getUserLanguage(ctx.from.id.toString()) || 'es' 
+          : 'es';
+        await ctx.reply(ERROR_MESSAGES[userLanguage].GENERIC);
       }
     });
   }
 
   private setupErrorHandler() {
-    this.bot.catch((err: any, ctx: BotContext) => {
+    this.bot.catch(async (err: any, ctx: BotContext) => {
       console.error('❌ Bot error:', err);
-      ctx.reply(ERROR_MESSAGES.GENERIC).catch(console.error);
+      const userLanguage = ctx.from?.id ? 
+        await UserService.getUserLanguage(ctx.from.id.toString()) || 'es' 
+        : 'es';
+      ctx.reply(ERROR_MESSAGES[userLanguage].GENERIC).catch(console.error);
     });
 
     process.on('unhandledRejection', (reason, promise) => {

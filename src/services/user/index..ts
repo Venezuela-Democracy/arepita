@@ -1,6 +1,7 @@
 import { User, IUser } from '../../models';
 import { VenezuelaRegion } from '../../bot/types';
 import { FlowAuthData } from './types';
+import { SupportedLanguage } from '../../bot/types';
 
 
 
@@ -145,4 +146,13 @@ export class UserService {
         throw error;
       }
     }
+      static async getUserLanguage(telegramId: string): Promise<SupportedLanguage | null> {
+        const user = await User.getUserLanguage(telegramId);
+        return user?.language || null;
+      }
+    
+      static async setUserLanguage(telegramId: string, language: SupportedLanguage): Promise<void> {
+        await User.setUserLanguage(telegramId, language);
+      }
+    
 }
