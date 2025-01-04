@@ -2,6 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-blue.svg)](https://t.me/VenezuelaDAOBot)
+[![Railway](https://img.shields.io/badge/Railway-Deployed-success)](https://railway.app)
+[![Flow](https://img.shields.io/badge/Flow-Blockchain-00ef8b)](https://flow.com)
 
 VenezuelaDAO is an innovative educational platform that combines blockchain technology, gamification, and social interaction to teach people about Decentralized Autonomous Organizations (DAOs) through a regional governance simulation focused on Venezuela.
 
