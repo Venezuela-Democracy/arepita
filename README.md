@@ -90,7 +90,7 @@ The platform will introduce an immersive narrative experience that includes:
 
 ## 🔄 System Architecture
 
-mermaid
+```mermaid
 graph TD
 subgraph Telegram Layer
 T[Telegram Users] -->|Commands| B[Telegram Bot]
@@ -109,6 +109,7 @@ end
 style F fill:#00ef8b,stroke:#333,stroke-width:2px
 style FCL fill:#00ef8b,stroke:#333,stroke-width:2px
 style NFT fill:#00ef8b,stroke:#333,stroke-width:2px
+```
 
 
 ## 🚀 Getting Started
