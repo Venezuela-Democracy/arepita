@@ -27,15 +27,40 @@ export const registerCommands = (bot: Telegraf<BotContext>, groupManager: Telegr
     bot.command(BOT_COMMANDS.STATUS, statusHandler);
     bot.command(BOT_COMMANDS.BUYPACK, buyPackHandler);
 
-    // Configurar comandos en el menú
+    // Configurar comandos en el menú con descripciones bilingües
     bot.telegram.setMyCommands([
-        { command: BOT_COMMANDS.START, description: 'Iniciar bot' },
-        { command: BOT_COMMANDS.REGISTER, description: 'Registrarse en VenezuelaDAO' },
-        { command: BOT_COMMANDS.HELP, description: 'Ver ayuda' },
-        { command: BOT_COMMANDS.STATUS, description: 'Ver estado del bot' },
-        { command: BOT_COMMANDS.BALANCE, description: 'Ver tu balance de FLOW' },
-        { command: BOT_COMMANDS.WALLET, description: 'Ver información de tu wallet' },
-        { command: BOT_COMMANDS.BUYPACK, description: 'Comprar un pack de NFTs' },
+        { 
+            command: BOT_COMMANDS.START, 
+            description: 'Start bot / Iniciar bot' 
+        },
+        { 
+            command: BOT_COMMANDS.REGISTER, 
+            description: 'Register in VzlaDAO / Registrarse en VzlaDAO' 
+        },
+        { 
+            command: BOT_COMMANDS.COLLECTION, 
+            description: 'View your NFTs / Ver tus NFTs' 
+        },
+        { 
+            command: BOT_COMMANDS.BALANCE, 
+            description: 'Check FLOW balance / Ver balance de FLOW' 
+        },
+        { 
+            command: BOT_COMMANDS.WALLET, 
+            description: 'Wallet info / Info de wallet' 
+        },
+        { 
+            command: BOT_COMMANDS.BUYPACK, 
+            description: 'Buy NFT pack / Comprar pack de NFTs' 
+        },
+        { 
+            command: BOT_COMMANDS.HELP, 
+            description: 'Get help / Ver ayuda' 
+        },
+        { 
+            command: BOT_COMMANDS.STATUS, 
+            description: 'Bot status / Estado del bot' 
+        }
     ]);
 
     console.log('✅ Comandos y eventos registrados correctamente');
