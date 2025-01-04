@@ -111,7 +111,63 @@ style FCL fill:#00ef8b,stroke:#333,stroke-width:2px
 style NFT fill:#00ef8b,stroke:#333,stroke-width:2px
 ```
 
+## 🔐 Authentication Flow
 
+```mermaid
+sequenceDiagram
+    participant User
+    participant Bot
+    participant API
+    participant Flow
+    
+    User->>Bot: /start command
+    Bot->>API: Create session
+    API->>Flow: Generate wallet
+    Flow-->>API: Wallet created
+    API-->>Bot: Session info
+    Bot-->>User: Welcome & wallet info
+    
+    Note over User,Flow: Flow integration enables<br/>seamless onboarding
+```
+
+## 🎮 User Journey
+
+```mermaid
+graph LR
+    subgraph User Actions
+    A[Start Bot] -->|Register| B[Join Region]
+    B -->|Daily Tasks| C[Earn Points]
+    C -->|Participate| D[DAO Governance]
+    end
+    
+    subgraph Flow Integration
+    C -->|Generate| E[Resources]
+    D -->|Manage| F[NFTs]
+    E -->|Power| D
+    end
+    
+    style E fill:#00ef8b,stroke:#333,stroke-width:2px
+    style F fill:#00ef8b,stroke:#333,stroke-width:2px
+```
+
+## 📡 Command Processing
+
+```mermaid
+stateDiagram-v2
+    [*] --> Received
+    Received --> Processing: Webhook
+    Processing --> FlowTransaction: NFT Operation
+    Processing --> DatabaseUpdate: User Update
+    Processing --> Response: Info Command
+    FlowTransaction --> Completed
+    DatabaseUpdate --> Completed
+    Response --> Completed
+    Completed --> [*]
+    
+    note right of FlowTransaction
+        Flow Blockchain Integration
+    end note
+```
 ## 🚀 Getting Started
 
 ### Prerequisites
