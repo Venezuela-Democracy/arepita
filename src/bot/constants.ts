@@ -7,6 +7,7 @@ export const BOT_COMMANDS = {
   REGISTER: 'register',
   BUYPACK: 'buypack',
   COLLECTION: 'collection',
+  SELL: 'sell',
 } as const;
 
 export const ERROR_MESSAGES = {

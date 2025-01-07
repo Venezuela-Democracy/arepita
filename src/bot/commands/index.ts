@@ -10,6 +10,7 @@ import { buyPackHandler } from './buypack';
 import { TelegramGroupManager } from '../managers/group';
 import { collectionActionHandler, collectionHandler } from './colecction';
 import { languageActionHandler, startHandler } from './start';
+import { sellHandler, sellActionHandler, handlePrice } from './sell';
 
 export const registerCommands = (bot: Telegraf<BotContext>, groupManager: TelegramGroupManager) => {
     console.log('📝 Registrando comandos y eventos...');
@@ -26,6 +27,9 @@ export const registerCommands = (bot: Telegraf<BotContext>, groupManager: Telegr
     bot.command(BOT_COMMANDS.HELP, helpHandler);
     bot.command(BOT_COMMANDS.STATUS, statusHandler);
     bot.command(BOT_COMMANDS.BUYPACK, buyPackHandler);
+    bot.command(BOT_COMMANDS.SELL, sellHandler);
+    bot.action(/^sell:(\w+)(?::(\w+))?(?::(\d+))?$/, sellActionHandler);
+    bot.on('text', handlePrice);
 
     // Configurar comandos en el menú con descripciones bilingües
     bot.telegram.setMyCommands([
@@ -60,7 +64,15 @@ export const registerCommands = (bot: Telegraf<BotContext>, groupManager: Telegr
         { 
             command: BOT_COMMANDS.STATUS, 
             description: 'Bot status / Estado del bot' 
-        }
+        },
+        { 
+            command: BOT_COMMANDS.COLLECTION, 
+            description: 'View your NFTs / Ver tus NFTs' 
+        },
+        { 
+            command: BOT_COMMANDS.SELL, 
+            description: 'Sell NFTs / Vender NFTs' 
+        },
     ]);
 
     console.log('✅ Comandos y eventos registrados correctamente');
