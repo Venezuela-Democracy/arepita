@@ -1,5 +1,6 @@
 // Constantes para las direcciones de los contratos
 const STOREFRONT_ADDRESS = "0x94b06cfca1d8a476";
+const NFT_CONTRACT_NAME = "VenezuelaNFT_14"; 
 
 // Las transacciones Cadence necesitarán este import
 const SETUP_STOREFRONT_TRANSACTION = `
@@ -26,7 +27,7 @@ const CREATE_LISTING_TRANSACTION = `
   import NonFungibleToken from 0x631e88ae7f1d7c20
   import MetadataViews from 0x631e88ae7f1d7c20
   import NFTStorefront from ${STOREFRONT_ADDRESS}
-  import VenezuelaNFT_14 from 0x5643fd47a29770e8
+  import ${NFT_CONTRACT_NAME} from 0x5643fd47a29770e8
 transaction(
     saleItemID: UInt64,
     saleItemPrice: UFix64,
@@ -45,7 +46,7 @@ transaction(
         self.saleCuts = []
         self.marketplacesCapability = []
 
-        let collectionData = VenezuelaNFT_14.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
+        let collectionData = ${NFT_CONTRACT_NAME}.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
             ?? panic("ViewResolver does not resolve NFTCollectionData view")
 
         // Receiver for the sale cut.
@@ -104,7 +105,7 @@ transaction(
         // Create listing
         let listingID = self.storefront.createListing(
             nftProviderCapability: self.VenezuelaNFTProvider,
-            nftType: Type<@VenezuelaNFT_14.NFT>(),
+            nftType: Type<@${NFT_CONTRACT_NAME}.NFT>(),
             nftID: saleItemID,
             salePaymentVaultType: Type<@FlowToken.Vault>(),
             saleCuts: self.saleCuts,
@@ -118,12 +119,12 @@ const PURCHASE_LISTING_TRANSACTION = `
   import NonFungibleToken from 0x631e88ae7f1d7c20
   import MetadataViews from 0x631e88ae7f1d7c20
   import NFTStorefront from ${STOREFRONT_ADDRESS}
-  import VenezuelaNFT_14 from 0x5643fd47a29770e8
+  import ${NFT_CONTRACT_NAME} from 0x5643fd47a29770e8
 
 transaction(listingResourceID: UInt64, storefrontAddress: Address, commissionRecipient: Address?) {
 
     let paymentVault: @{FungibleToken.Vault}
-    let VenezuelaNFT_14Receiver: &{NonFungibleToken.Receiver}
+    let nftReceiver: &{NonFungibleToken.Receiver} // Updated variable name
     let storefront: &{NFTStorefront.StorefrontPublic}
     let listing: &{NFTStorefront.ListingPublic}
     var commissionRecipientCap: Capability<&{FungibleToken.Receiver}>?
@@ -146,9 +147,9 @@ transaction(listingResourceID: UInt64, storefrontAddress: Address, commissionRec
         self.paymentVault <- mainVault.withdraw(amount: price)
 
         // Access the buyer's NFT collection to store the purchased NFT.
-        let collectionData = VenezuelaNFT_14.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
+        let collectionData = ${NFT_CONTRACT_NAME}.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
             ?? panic("ViewResolver does not resolve NFTCollectionData view")
-        self.VenezuelaNFT_14Receiver = acct.capabilities.borrow<&{NonFungibleToken.Receiver}>(collectionData.publicPath)
+        self.nftReceiver = acct.capabilities.borrow<&{NonFungibleToken.Receiver}>(collectionData.publicPath)
             ?? panic("Cannot borrow NFT collection receiver from account")
 
         // Fetch the commission amt.
@@ -174,7 +175,7 @@ transaction(listingResourceID: UInt64, storefrontAddress: Address, commissionRec
             payment: <-self.paymentVault,
         )
         // Deposit the NFT in the buyer's collection.
-        self.VenezuelaNFT_14Receiver.deposit(token: <-item)
+        self.nftReceiver.deposit(token: <-item)
     }
 }
 `;

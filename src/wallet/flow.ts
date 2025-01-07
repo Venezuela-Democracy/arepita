@@ -9,6 +9,7 @@ export class FlowWallet {
   private ec: EC;
   private serviceAccount: typeof flowConfig.serviceAccount;
   private INITIAL_FUNDING = "5.0";
+  private NFT_CONTRACT_NAME = "VenezuelaNFT_14";
 
   constructor() {
     this.ec = new EC('p256');
@@ -269,38 +270,38 @@ export class FlowWallet {
   
       const transactionId = await fcl.mutate({
         cadence: `
-          import VenezuelaNFT_13 from ${flowConfig.venezuelaNFTAddress}
+          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
           import NonFungibleToken from ${flowConfig.nonFungibleToken}
           import MetadataViews from ${flowConfig.metadataViews}
   
           transaction(setID: UInt32) {
             prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue, UnpublishCapability) &Account) {
-              let collectionData = VenezuelaNFT_13.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
+              let collectionData = ${this.NFT_CONTRACT_NAME}.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
                 ?? panic("ViewResolver does not resolve NFTCollectionData view")
   
               // Solo creamos la colección si no existe
-              if signer.storage.borrow<&VenezuelaNFT_13.Collection>(from: collectionData.storagePath) == nil {
+              if signer.storage.borrow<&${this.NFT_CONTRACT_NAME}.Collection>(from: collectionData.storagePath) == nil {
                 // Create a new empty collection
-                let collection <- VenezuelaNFT_13.createEmptyCollection(nftType: Type<@VenezuelaNFT_13.NFT>())
+                let collection <- ${this.NFT_CONTRACT_NAME}.createEmptyCollection(nftType: Type<@${this.NFT_CONTRACT_NAME}.NFT>())
   
                 // save it to the account
                 signer.storage.save(<-collection, to: collectionData.storagePath)
   
                 // create a public capability for the collection
-                let collectionCap = signer.capabilities.storage.issue<&VenezuelaNFT_13.Collection>(collectionData.storagePath)
+                let collectionCap = signer.capabilities.storage.issue<&${this.NFT_CONTRACT_NAME}.Collection>(collectionData.storagePath)
                 signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
               }
               
               // Commit my bet and get a receipt
-              let receipt <- VenezuelaNFT_13.buyPack(setID: setID)
+              let receipt <- ${this.NFT_CONTRACT_NAME}.buyPack(setID: setID)
               
               // Check that I don't already have a receipt stored
-              if signer.storage.type(at: VenezuelaNFT_13.ReceiptStoragePath) != nil {
-                panic("Storage collision at path=".concat(VenezuelaNFT_13.ReceiptStoragePath.toString()).concat(" a Receipt is already stored!"))
+              if signer.storage.type(at: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath) != nil {
+                panic("Storage collision at path=".concat(${this.NFT_CONTRACT_NAME}.ReceiptStoragePath.toString()).concat(" a Receipt is already stored!"))
               }
   
               // Save that receipt to my storage
-              signer.storage.save(<-receipt, to: VenezuelaNFT_13.ReceiptStoragePath)
+              signer.storage.save(<-receipt, to: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
             }
           }
         `,
@@ -329,21 +330,21 @@ export class FlowWallet {
   
       const transactionId = await fcl.mutate({
         cadence: `
-          import VenezuelaNFT_13 from ${flowConfig.venezuelaNFTAddress}
+          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
           import NonFungibleToken from ${flowConfig.nonFungibleToken}
           import MetadataViews from ${flowConfig.metadataViews}
   
           transaction {
             prepare(signer: auth(BorrowValue, LoadValue) &Account) {
-              let receiverRef = signer.capabilities.borrow<&{VenezuelaNFT_13.VenezuelaNFT_13CollectionPublic}>(VenezuelaNFT_13.CollectionPublicPath)
+              let receiverRef = signer.capabilities.borrow<&{${this.NFT_CONTRACT_NAME}.${this.NFT_CONTRACT_NAME}CollectionPublic}>(${this.NFT_CONTRACT_NAME}.CollectionPublicPath)
                   ?? panic("Cannot borrow a reference to the recipient's moment collection")
               
               // Load receipt from storage
-              let receipt <- signer.storage.load<@VenezuelaNFT_13.Receipt>(from: VenezuelaNFT_13.ReceiptStoragePath)
+              let receipt <- signer.storage.load<@${this.NFT_CONTRACT_NAME}.Receipt>(from: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
                   ?? panic("No Receipt found in storage")
   
               // Reveal by redeeming receipt
-              VenezuelaNFT_13.revealPack(
+              ${this.NFT_CONTRACT_NAME}.revealPack(
                 receipt: <-receipt, 
                 minter: signer.address,
                 emptyDict: {}
@@ -371,10 +372,10 @@ export class FlowWallet {
       // Primero obtenemos el tipo específico de esta carta
       const cardType = await fcl.query({
         cadence: `
-          import VenezuelaNFT_13 from ${flowConfig.venezuelaNFTAddress}
+          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
           
           access(all) fun main(cardID: UInt32): Type {
-            return VenezuelaNFT_13.getCardType(cardID: cardID)
+            return ${this.NFT_CONTRACT_NAME}.getCardType(cardID: cardID)
           }
         `,
         args: (arg: any, t: any) => [
@@ -387,10 +388,10 @@ export class FlowWallet {
       // Según el tipo, obtenemos la metadata específica
       const metadata = await fcl.query({
         cadence: `
-          import VenezuelaNFT_13 from ${flowConfig.venezuelaNFTAddress}
+          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
           
           access(all) fun main(cardID: UInt32): AnyStruct {
-            return VenezuelaNFT_13.getCardMetadata(cardID: cardID, cardType: VenezuelaNFT_13.getCardType(cardID: cardID))
+            return ${this.NFT_CONTRACT_NAME}.getCardMetadata(cardID: cardID, cardType: ${this.NFT_CONTRACT_NAME}.getCardType(cardID: cardID))
           }
         `,
         args: (arg: any, t: any) => [
@@ -418,7 +419,7 @@ export class FlowWallet {
       // Get all NFTs for the address
       const nfts = await fcl.query({
         cadence: `
-          import VenezuelaNFT_13 from ${flowConfig.venezuelaNFTAddress}
+          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
           import MetadataViews from ${flowConfig.metadataViews}
   
           access(all) fun main(account: Address): [AnyStruct]? {
@@ -427,7 +428,7 @@ export class FlowWallet {
             var nft: AnyStruct = nil
   
             let cap = account.capabilities
-              .borrow<&VenezuelaNFT_13.Collection>(VenezuelaNFT_13.CollectionPublicPath)
+              .borrow<&${this.NFT_CONTRACT_NAME}.Collection>(${this.NFT_CONTRACT_NAME}.CollectionPublicPath)
               ?? panic("Could not borrow collection capability")
   
             let ids = cap.getIDs()
@@ -437,7 +438,7 @@ export class FlowWallet {
               let displayView = MetadataViews.getDisplay(resolver)!
               let serialView = MetadataViews.getSerial(resolver)!
               let traits = MetadataViews.getTraits(resolver)!
-              let cardType = VenezuelaNFT_13.getCardType(cardID: UInt32(id))
+              let cardType = ${this.NFT_CONTRACT_NAME}.getCardType(cardID: UInt32(id))
   
               nft = {
                 "nftId": id,
@@ -481,13 +482,13 @@ export class FlowWallet {
           
           // Group by card type
           switch(cardType) {
-            case 'A.826dae42290107c3.VenezuelaNFT_13.LocationCard':
+            case `A.826dae42290107c3.${this.NFT_CONTRACT_NAME}.LocationCard`:
               groupedNFTs.locations.push(enrichedNFT);
               break;
-            case 'A.826dae42290107c3.VenezuelaNFT_13.CharacterCard':
+            case `A.826dae42290107c3.${this.NFT_CONTRACT_NAME}.CharacterCard`:
               groupedNFTs.characters.push(enrichedNFT);
               break;
-            case 'A.826dae42290107c3.VenezuelaNFT_13.CulturalItemCard':
+            case `A.826dae42290107c3.${this.NFT_CONTRACT_NAME}.CulturalItemCard`:
               groupedNFTs.culturalItems.push(enrichedNFT);
               break;
             default:
