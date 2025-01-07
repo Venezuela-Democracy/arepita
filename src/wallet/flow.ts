@@ -275,6 +275,7 @@ export class FlowWallet {
           import MetadataViews from ${flowConfig.metadataViews}
   
           transaction(setID: UInt32) {
+          
             prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue, UnpublishCapability) &Account) {
               let collectionData = ${this.NFT_CONTRACT_NAME}.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
                 ?? panic("ViewResolver does not resolve NFTCollectionData view")
@@ -291,17 +292,20 @@ export class FlowWallet {
                 let collectionCap = signer.capabilities.storage.issue<&${this.NFT_CONTRACT_NAME}.Collection>(collectionData.storagePath)
                 signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
               }
-              
-              // Commit my bet and get a receipt
+              // get ref to ReceiptStorage
+              let storageRef = signer.storage.borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(from: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
+                  ?? panic("Cannot borrow a reference to the recipient's VenezuelaNFT ReceiptStorage")    
+              // Buy pack and get a receipt
               let receipt <- ${this.NFT_CONTRACT_NAME}.buyPack(setID: setID)
               
-              // Check that I don't already have a receipt stored
-              if signer.storage.type(at: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath) != nil {
-                panic("Storage collision at path=".concat(${this.NFT_CONTRACT_NAME}.ReceiptStoragePath.toString()).concat(" a Receipt is already stored!"))
+              // Check that I don't already have a receiptStorage
+              if signer.storage.type(at: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath) == nil {
+                  let storage <- ${this.NFT_CONTRACT_NAME}.createEmptyStorage()
+                  signer.storage.save(<- storage, to: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
               }
   
               // Save that receipt to my storage
-              signer.storage.save(<-receipt, to: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
+              storageRef.deposit(receipt: <- receipt)
             }
           }
         `,
