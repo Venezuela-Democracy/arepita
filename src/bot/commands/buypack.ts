@@ -113,8 +113,21 @@ export async function buyPackHandler(ctx: BotContext) {
     if (revealEvent) {
       const nftID = revealEvent.data.cardID;
       const { cardType, metadata } = await wallet.getNFTMetadata(nftID);
-      console.log(JSON.stringify(metadata, null, 2));
+      //console.log(JSON.stringify(metadata, null, 2));
+      try {
+        await wallet.setupStorefront(
+          authData.address,
+          authData.privateKey
+        );
+        console.log('✅ Storefront configurado exitosamente');
+        await ctx.reply(MESSAGES[userLanguage].STOREFRONT_SETUP_SUCCESS, { parse_mode: 'Markdown' });
 
+      } catch (error) {
+        // Si falla la configuración del Storefront, solo lo logueamos pero no interrumpimos el flujo
+        console.error('Error configurando Storefront:', error);
+        await ctx.reply(MESSAGES[userLanguage].STOREFRONT_SETUP_ERROR, { parse_mode: 'Markdown' });
+
+      }
       const message = formatNFTRevealMessage(metadata, cardType, userLanguage);
       await ctx.reply(message, { parse_mode: 'Markdown' });
     } else {

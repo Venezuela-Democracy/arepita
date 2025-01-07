@@ -161,6 +161,14 @@ Te notificaré cuando pueda ser revelado.`,
 
 Por favor, intenta nuevamente en unos momentos.
 Si el problema persiste, contacta a soporte.`,
+STOREFRONT_SETUP_SUCCESS: '🏪 ¡Tu tienda NFT ha sido configurada! Ahora puedes comerciar tus NFTs usando /marketplace',
+STOREFRONT_SETUP_ERROR: '⚠️ No se pudo configurar tu tienda NFT. Podrás intentarlo más tarde usando /marketplace',
+SELL_NFT_TITLE: '💰 Vender NFTs',
+SELL_NFT_SELECT: 'Selecciona el NFT que quieres vender:',
+SELL_NFT_SET_PRICE: '💵 Por favor, envía el precio en FLOW para este NFT:',
+SELL_NFT_CONFIRM: '⚠️ ¿Confirmas poner a la venta este NFT por {price} FLOW?',
+SELL_NFT_SUCCESS: '✅ NFT puesto a la venta exitosamente',
+SELL_NFT_ERROR: '❌ Error al poner el NFT a la venta',
   },
 
   en: {
@@ -295,5 +303,13 @@ I'll notify you when it can be revealed.`,
 
 Please try again in a few moments.
 If the problem persists, contact support.`,  
+STOREFRONT_SETUP_SUCCESS: '🏪 Your NFT store has been set up! You can now trade your NFTs using /marketplace',
+STOREFRONT_SETUP_ERROR: '⚠️ Could not set up your NFT store. You can try again later using /marketplace',
+SELL_NFT_TITLE: '💰 Sell NFTs',
+SELL_NFT_SELECT: 'Select the NFT you want to sell:',
+SELL_NFT_SET_PRICE: '💵 Please send the price in FLOW for this NFT:',
+SELL_NFT_CONFIRM: '⚠️ Do you confirm listing this NFT for {price} FLOW?',
+SELL_NFT_SUCCESS: '✅ NFT successfully listed for sale',
+SELL_NFT_ERROR: '❌ Error listing NFT for sale',
 }
 } as const;

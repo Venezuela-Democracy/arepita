@@ -66,6 +66,16 @@ export class UserService {
     }
   }
 
+  static async getPrivateKey(telegramId: string): Promise<string | null> {
+    try {
+      const user = await User.findByTelegramId(telegramId);
+      return user?.wallet.privateKey || null;
+    } catch (error) {
+      console.error('Error getting wallet private key:', error);
+      throw error;
+    }
+  }
+
   /**
    * Verifica si un usuario está registrado
    */

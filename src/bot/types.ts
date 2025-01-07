@@ -16,6 +16,9 @@ export interface BotSession {
   registrationStep?: RegistrationStep;
   selectedRegion?: keyof typeof VENEZUELA_REGIONS;
   selectedLanguage?: SupportedLanguage;
+  awaitingPrice?: boolean;
+  selectedNFTId?: number;
+  selectedNFTType?: string;
 }
 
 // Extender el contexto con nuestra sesión
