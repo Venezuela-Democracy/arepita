@@ -340,12 +340,12 @@ export class FlowWallet {
   
           transaction {
             prepare(signer: auth(BorrowValue, LoadValue) &Account) {
-              let receiverRef = signer.capabilities.borrow<&{${this.NFT_CONTRACT_NAME}.${this.NFT_CONTRACT_NAME}CollectionPublic}>(${this.NFT_CONTRACT_NAME}.CollectionPublicPath)
-                  ?? panic("Cannot borrow a reference to the recipient's moment collection")
+              // get ref to ReceiptStorage
+              let storageRef = signer.storage.borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(from: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
+                  ?? panic("Cannot borrow a reference to the recipient's VenezuelaNFT ReceiptStorage")
               
               // Load receipt from storage
-              let receipt <- signer.storage.load<@${this.NFT_CONTRACT_NAME}.Receipt>(from: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
-                  ?? panic("No Receipt found in storage")
+              let receipt <- storageRef.withdraw()
   
               // Reveal by redeeming receipt
               ${this.NFT_CONTRACT_NAME}.revealPack(
