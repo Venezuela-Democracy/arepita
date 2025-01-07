@@ -510,4 +510,42 @@ export class FlowWallet {
       throw new Error('Failed to get NFT collection');
     }
   }
+
+  async setupStorefront(address: string, privateKey: string): Promise<string> {
+    try {
+      const authorization = await this.getAuthorization({
+        address: address,
+        privateKey: privateKey
+      });
+
+      const transactionId = await fcl.mutate({
+        cadence: `
+          import 0x94b06cfca1d8a476
+
+          transaction {
+            prepare(acct: auth(IssueStorageCapabilityController, PublishCapability, Storage) &Account) {
+              if acct.storage.borrow<&NFTStorefront.Storefront>(from: NFTStorefront.StorefrontStoragePath) == nil {
+                let storefront <- NFTStorefront.createStorefront()
+                acct.storage.save(<-storefront, to: NFTStorefront.StorefrontStoragePath)
+                
+                let storefrontPublicCap = acct.capabilities.storage.issue<&{NFTStorefront.StorefrontPublic}>(
+                  NFTStorefront.StorefrontStoragePath
+                )
+                acct.capabilities.publish(storefrontPublicCap, at: NFTStorefront.StorefrontPublicPath)
+              }
+            }
+          }
+        `,
+        payer: authorization,
+        proposer: authorization,
+        authorizations: [authorization],
+        limit: 1000
+      });
+
+      return transactionId;
+    } catch (error) {
+      console.error('Error setting up storefront:', error);
+      throw new Error('Failed to setup storefront');
+    }
+  } 
 }
