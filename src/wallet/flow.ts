@@ -3,6 +3,7 @@ import { ec as EC } from "elliptic";
 import { SHA3 } from "sha3";
 import { flowConfig } from './config';
 import { FlowAuthorization, WalletResponse} from "./types";
+import { CREATE_LISTING_TRANSACTION, PURCHASE_LISTING_TRANSACTION, SETUP_STOREFRONT_TRANSACTION } from "./transactions";
 
 export class FlowWallet {
   private ec: EC;
@@ -519,23 +520,7 @@ export class FlowWallet {
       });
 
       const transactionId = await fcl.mutate({
-        cadence: `
-          import 0x94b06cfca1d8a476
-
-          transaction {
-            prepare(acct: auth(IssueStorageCapabilityController, PublishCapability, Storage) &Account) {
-              if acct.storage.borrow<&NFTStorefront.Storefront>(from: NFTStorefront.StorefrontStoragePath) == nil {
-                let storefront <- NFTStorefront.createStorefront()
-                acct.storage.save(<-storefront, to: NFTStorefront.StorefrontStoragePath)
-                
-                let storefrontPublicCap = acct.capabilities.storage.issue<&{NFTStorefront.StorefrontPublic}>(
-                  NFTStorefront.StorefrontStoragePath
-                )
-                acct.capabilities.publish(storefrontPublicCap, at: NFTStorefront.StorefrontPublicPath)
-              }
-            }
-          }
-        `,
+        cadence: SETUP_STOREFRONT_TRANSACTION,
         payer: authorization,
         proposer: authorization,
         authorizations: [authorization],
@@ -547,5 +532,72 @@ export class FlowWallet {
       console.error('Error setting up storefront:', error);
       throw new Error('Failed to setup storefront');
     }
-  } 
+  }
+
+  async createListing(
+    address: string, 
+    privateKey: string, 
+    nftId: number, 
+    saleItemPrice: number,
+    marketplacesAddress: string[]
+  ): Promise<string> {
+    try {
+      const authorization = await this.getAuthorization({
+        address: address,
+        privateKey: privateKey
+      });
+
+      const transactionId = await fcl.mutate({
+        cadence: CREATE_LISTING_TRANSACTION,
+        args: (arg: any, t: any) => [
+          arg(nftId, t.UInt64),
+          arg(saleItemPrice.toFixed(8), t.UFix64),
+          arg(null, t.Optional(t.String)),
+          arg("0.0", t.UFix64),
+          arg(marketplacesAddress, t.Array(t.Address))
+        ],
+        payer: authorization,
+        proposer: authorization,
+        authorizations: [authorization],
+        limit: 1000
+      });
+
+      return transactionId;
+    } catch (error) {
+      console.error('Error creating listing:', error);
+      throw new Error('Failed to create listing');
+    }
+  }
+
+  async purchaseListing(
+    buyerAddress: string,
+    buyerPrivateKey: string,
+    listingId: number,
+    sellerAddress: string
+  ): Promise<string> {
+    try {
+      const authorization = await this.getAuthorization({
+        address: buyerAddress,
+        privateKey: buyerPrivateKey
+      });
+
+      const transactionId = await fcl.mutate({
+        cadence: PURCHASE_LISTING_TRANSACTION,
+        args: (arg: any, t: any) => [
+          arg(listingId, t.UInt64),
+          arg(sellerAddress, t.Address),
+          arg(null, t.Optional(t.Address))
+        ],
+        payer: authorization,
+        proposer: authorization,
+        authorizations: [authorization],
+        limit: 1000
+      });
+
+      return transactionId;
+    } catch (error) {
+      console.error('Error purchasing listing:', error);
+      throw new Error('Failed to purchase listing');
+    }
+  }
 }
