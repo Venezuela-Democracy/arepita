@@ -44,11 +44,13 @@ deploy: build check-env
 	@docker buildx build --platform linux/amd64 \
 		-t gcr.io/$(PROJECT_ID)/$(SERVICE_NAME):$(GIT_SHA) . --push
 
+	@echo "$(BLUE)📦 Updating secrets...$(RESET)"
 	@gcloud secrets versions add $(SERVICE_NAME)-env \
 		--data-file .env \
 		|| gcloud secrets create $(SERVICE_NAME)-env \
 		--data-file .env
 
+	@echo "$(BLUE)🚀 Deploying service...$(RESET)"
 	@gcloud run deploy $(SERVICE_NAME) \
 		--image gcr.io/$(PROJECT_ID)/$(SERVICE_NAME):$(GIT_SHA) \
 		--region $(REGION) \
@@ -57,7 +59,8 @@ deploy: build check-env
 		--memory 2Gi \
 		--cpu 2 \
 		--min-instances 1 \
-		--max-instances 2
+		--max-instances 1 \
+		--concurrency 80
 
 	@echo "$(GREEN)✅ Deployment successful$(RESET)"
 	@make set-webhook

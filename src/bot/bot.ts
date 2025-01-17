@@ -8,7 +8,8 @@ import { UserService } from '../services/user/index.';
 
 export class TelegramBot {
   private bot: Telegraf<BotContext>;
-  private groupManager: TelegramGroupManager; // Añadir esta propiedad
+  private groupManager: TelegramGroupManager;
+  private messageHandlers: Map<string, boolean> = new Map();
 
   constructor(token: string) {
     this.bot = new Telegraf<BotContext>(token);
@@ -16,6 +17,29 @@ export class TelegramBot {
 
     // Configurar middleware de sesión
     this.bot.use(session());
+
+    // Middleware para prevenir duplicados
+    this.bot.use(async (ctx, next) => {
+      const messageId = ctx.message?.message_id 
+        ? `${ctx.message.message_id}-${ctx.message.date}`
+        : ctx.callbackQuery?.id;
+
+      if (!messageId) return next();
+
+      if (this.messageHandlers.has(messageId)) {
+        console.log('🚫 Mensaje duplicado detectado:', messageId);
+        return;
+      }
+
+      this.messageHandlers.set(messageId, true);
+      
+      // Limpiar mensajes antiguos cada 30 segundos
+      setTimeout(() => {
+        this.messageHandlers.delete(messageId);
+      }, 30000);
+
+      return next();
+    });
 
     // Registrar comandos
     try {
