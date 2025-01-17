@@ -36,29 +36,18 @@ const getCollectionKeyboard = (
   ]);
 };
 
-const formatNFTMessage = (nft: any, type: string, userLanguage: 'es' | 'en') => {
+const formatNFTMessage = (nftGroup: any, type: string, userLanguage: 'es' | 'en') => {
   try {
-    if (!nft || !nft.display) {
-      console.error('NFT data is invalid:', nft);
+    if (!nftGroup || !nftGroup.display) {
+      console.error('NFT data is invalid:', nftGroup);
       return userLanguage === 'es' ? 
         '❌ Error: No se pudieron cargar los datos del NFT' :
         '❌ Error: Could not load NFT data';
     }
 
-    let message = '';
-    if (nft.display.thumbnail?.url) {
-      message += `[⚜️](${nft.display.thumbnail.url})`;
-    }
-    message += `*${nft.display.name || 'NFT'}*\n`;
-    message += `━━━━━━━━━━━━━━━\n\n`;
-
-    const traits = nft.traits?.traits?.reduce((acc: any, trait: any) => {
-      acc[trait.name] = trait.value;
-      return acc;
-    }, {}) || {};
-
     const labels = {
       es: {
+        copies: 'Copias',
         location: 'UBICACIÓN',
         region: 'Región',
         stats: 'ESTADÍSTICAS',
@@ -76,6 +65,7 @@ const formatNFTMessage = (nft: any, type: string, userLanguage: 'es' | 'en') => 
         description: 'Descripción'
       },
       en: {
+        copies: 'Copies',
         location: 'LOCATION',
         region: 'Region',
         stats: 'STATISTICS',
@@ -93,6 +83,22 @@ const formatNFTMessage = (nft: any, type: string, userLanguage: 'es' | 'en') => 
         description: 'Description'
       }
     };
+
+    let message = '';
+    if (nftGroup.display.thumbnail?.url) {
+      message += `[⚜️](${nftGroup.display.thumbnail.url})`;
+    }
+    message += `*${nftGroup.display.name || 'NFT'}*`;
+    message += nftGroup.count > 1 ? ` (x${nftGroup.count})` : '';
+    message += `\n━━━━━━━━━━━━━━━\n\n`;
+
+    // Obtener los traits de manera correcta
+    const traits = nftGroup.instances[0].traits.traits.reduce((acc: any, trait: any) => {
+      acc[trait.name] = trait.value;
+      return acc;
+    }, {});
+
+    console.log('Traits procesados:', traits); // Debug
 
     switch (type) {
       case 'locations':
@@ -153,13 +159,20 @@ const formatNFTMessage = (nft: any, type: string, userLanguage: 'es' | 'en') => 
         break;
     }
 
-    if (nft.display.description) {
-      message += `\n📝 *${labels[userLanguage].description}*\n${nft.display.description}\n`;
+    if (nftGroup.display.description) {
+      message += `\n📝 *${labels[userLanguage].description}*\n${nftGroup.display.description}\n`;
+    }
+
+    if (nftGroup.count > 1) {
+      message += `\n🔢 *${labels[userLanguage].copies}:*\n`;
+      nftGroup.instances.forEach((instance: any) => {
+        message += `• #${instance.serial.number}\n`;
+      });
     }
 
     return message;
   } catch (error) {
-    console.error('Error formatting NFT message:', error, '\nNFT data:', nft);
+    console.error('Error formatting NFT message:', error, '\nNFT data:', nftGroup);
     return userLanguage === 'es' ? 
       '❌ Error al formatear los datos del NFT' :
       '❌ Error formatting NFT data';
@@ -218,22 +231,28 @@ export const collectionHandler = async (ctx: BotContext) => {
         locations: '📍 Ubicaciones',
         characters: '👤 Personajes',
         items: '🎨 Items Culturales',
-        select: 'Selecciona una categoría para ver tus NFTs:'
+        select: 'Selecciona una categoría para ver tus NFTs:',
+        unique: 'únicos',
+        total: 'total'
       },
       en: {
         title: '🗂 Your NFT Collection',
         locations: '📍 Locations',
         characters: '👤 Characters',
         items: '🎨 Cultural Items',
-        select: 'Select a category to view your NFTs:'
+        select: 'Select a category to view your NFTs:',
+        unique: 'unique',
+        total: 'total'
       }
     };
 
+    const getTotalCount = (items: any[]) => items.reduce((sum, item) => sum + item.count, 0);
+
     await ctx.reply(
       `${labels[userLanguage].title}\n\n` +
-      `${labels[userLanguage].locations}: ${collection.locations.length}\n` +
-      `${labels[userLanguage].characters}: ${collection.characters.length}\n` +
-      `${labels[userLanguage].items}: ${collection.culturalItems.length}\n\n` +
+      `${labels[userLanguage].locations}: ${collection.locations.length} ${labels[userLanguage].unique} (${getTotalCount(collection.locations)} ${labels[userLanguage].total})\n` +
+      `${labels[userLanguage].characters}: ${collection.characters.length} ${labels[userLanguage].unique} (${getTotalCount(collection.characters)} ${labels[userLanguage].total})\n` +
+      `${labels[userLanguage].items}: ${collection.culturalItems.length} ${labels[userLanguage].unique} (${getTotalCount(collection.culturalItems)} ${labels[userLanguage].total})\n\n` +
       `${labels[userLanguage].select}`,
       {
         parse_mode: 'Markdown',
@@ -291,22 +310,28 @@ export const collectionActionHandler = async (ctx: BotContext) => {
           locations: '📍 Ubicaciones',
           characters: '👤 Personajes',
           items: '🎨 Items Culturales',
-          select: 'Selecciona una categoría para ver tus NFTs:'
+          select: 'Selecciona una categoría para ver tus NFTs:',
+          unique: 'únicos',
+          total: 'total'
         },
         en: {
           title: '🗂 Your NFT Collection',
           locations: '📍 Locations',
           characters: '👤 Characters',
           items: '🎨 Cultural Items',
-          select: 'Select a category to view your NFTs:'
+          select: 'Select a category to view your NFTs:',
+          unique: 'unique',
+          total: 'total'
         }
       };
 
+      const getTotalCount = (items: any[]) => items.reduce((sum, item) => sum + item.count, 0);
+
       await ctx.editMessageText(
         `${labels[userLanguage].title}\n\n` +
-        `${labels[userLanguage].locations}: ${collection.locations.length}\n` +
-        `${labels[userLanguage].characters}: ${collection.characters.length}\n` +
-        `${labels[userLanguage].items}: ${collection.culturalItems.length}\n\n` +
+        `${labels[userLanguage].locations}: ${collection.locations.length} ${labels[userLanguage].unique} (${getTotalCount(collection.locations)} ${labels[userLanguage].total})\n` +
+        `${labels[userLanguage].characters}: ${collection.characters.length} ${labels[userLanguage].unique} (${getTotalCount(collection.characters)} ${labels[userLanguage].total})\n` +
+        `${labels[userLanguage].items}: ${collection.culturalItems.length} ${labels[userLanguage].unique} (${getTotalCount(collection.culturalItems)} ${labels[userLanguage].total})\n\n` +
         `${labels[userLanguage].select}`,
         {
           parse_mode: 'Markdown',

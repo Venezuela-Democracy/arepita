@@ -114,20 +114,20 @@ export async function buyPackHandler(ctx: BotContext) {
       const nftID = revealEvent.data.cardID;
       const { cardType, metadata } = await wallet.getNFTMetadata(nftID);
       //console.log(JSON.stringify(metadata, null, 2));
-      try {
-        await wallet.setupStorefront(
-          authData.address,
-          authData.privateKey
-        );
-        console.log('✅ Storefront configurado exitosamente');
-        await ctx.reply(MESSAGES[userLanguage].STOREFRONT_SETUP_SUCCESS, { parse_mode: 'Markdown' });
+      // try {
+      //   await wallet.setupStorefront(
+      //     authData.address,
+      //     authData.privateKey
+      //   );
+      //   console.log('✅ Storefront configurado exitosamente');
+      //   await ctx.reply(MESSAGES[userLanguage].STOREFRONT_SETUP_SUCCESS, { parse_mode: 'Markdown' });
 
-      } catch (error) {
-        // Si falla la configuración del Storefront, solo lo logueamos pero no interrumpimos el flujo
-        console.error('Error configurando Storefront:', error);
-        await ctx.reply(MESSAGES[userLanguage].STOREFRONT_SETUP_ERROR, { parse_mode: 'Markdown' });
+      // } catch (error) {
+      //   // Si falla la configuración del Storefront, solo lo logueamos pero no interrumpimos el flujo
+      //   console.error('Error configurando Storefront:', error);
+      //   await ctx.reply(MESSAGES[userLanguage].STOREFRONT_SETUP_ERROR, { parse_mode: 'Markdown' });
 
-      }
+      // }
       const message = formatNFTRevealMessage(metadata, cardType, userLanguage);
       await ctx.reply(message, { parse_mode: 'Markdown' });
     } else {
@@ -198,7 +198,7 @@ function formatNFTRevealMessage(metadata: any, cardType: string, userLanguage: '
   message += `━━━━━━━━━━━━━━━\n\n`;
 
   switch (cardType) {
-    case 'A.826dae42290107c3.VenezuelaNFT_13.LocationCard':
+    case 'A.826dae42290107c3.VenezuelaNFT_16.LocationCard':
       message += `📍 *${labels[userLanguage].location}*\n`;
       message += `🌎 ${labels[userLanguage].region}: ${metadata.region}\n`;
       message += `━━━━ ${labels[userLanguage].stats} ━━━━\n`;
@@ -207,7 +207,7 @@ function formatNFTRevealMessage(metadata: any, cardType: string, userLanguage: '
       message += `🎯 ${labels[userLanguage].specialty}: ${metadata.type}\n`;
       break;
 
-    case 'A.826dae42290107c3.VenezuelaNFT_13.CharacterCard':
+    case 'A.826dae42290107c3.VenezuelaNFT_16.CharacterCard':
       message += `👤 *${labels[userLanguage].character}*\n`;
       message += `🎭 ${labels[userLanguage].class}: ${metadata.characterTypes.join(' / ')}\n`;
       message += `━━━━ ${labels[userLanguage].stats} ━━━━\n`;
@@ -229,7 +229,7 @@ function formatNFTRevealMessage(metadata: any, cardType: string, userLanguage: '
       }
       break;
 
-    case 'A.826dae42290107c3.VenezuelaNFT_13.CulturalItemCard':
+    case 'A.826dae42290107c3.VenezuelaNFT_16.CulturalItemCard':
       message += `🎨 *${labels[userLanguage].cultural}*\n`;
       message += `🎯 ${labels[userLanguage].category}: ${metadata.type}\n`;
       message += `━━━━ ${labels[userLanguage].stats} ━━━━\n`;

@@ -1,6 +1,6 @@
 // Constantes para las direcciones de los contratos
 const STOREFRONT_ADDRESS = "0x94b06cfca1d8a476";
-const NFT_CONTRACT_NAME = "VenezuelaNFT_14"; 
+const NFT_CONTRACT_NAME = "VenezuelaNFT_15"; 
 
 // Las transacciones Cadence necesitarán este import
 const SETUP_STOREFRONT_TRANSACTION = `

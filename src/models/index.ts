@@ -1,11 +1,11 @@
-import { model } from 'mongoose';
-import userSchema, { IUser, IUserModel } from './user';
-import groupSchema, { IGroup } from './group';
+import userModel, { IUserModel } from './user';
+import groupModel, { IGroupModel } from './group';
+import { IUser, IGroup } from './types';
 
-export const User = model<IUser, IUserModel>('User', userSchema);
-export const Group = model<IGroup>('Group', groupSchema);
+export const User = userModel;
+export const Group = groupModel;
 
-export type { IUser, IUserModel, IGroup };
+export type { IUser, IUserModel, IGroup, IGroupModel };
 
 export const Models = {
   User,
