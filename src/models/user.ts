@@ -1,56 +1,116 @@
 import { db } from '../config/firebase';
-import { VENEZUELA_REGIONS } from '../bot/regions';
-import { IUser } from './types';
+import { VenezuelaRegion, SupportedLanguage } from '../bot/types';
+import { 
+  DocumentData, 
+  QueryDocumentSnapshot,
+  DocumentSnapshot,
+  CollectionReference,
+  Query
+} from 'firebase-admin/firestore';
 
-export interface IUserModel {
-  findByTelegramId(telegramId: string): Promise<IUser | null>;
-  createUser(userData: {
-    telegramId: string;
-    region: string;
-    language: 'es' | 'en';
-    wallet: {
-      address: string;
-      privateKey: string;
-    };
-  }): Promise<IUser>;
-  setUserLanguage(telegramId: string, language: 'es' | 'en'): Promise<IUser | null>;
-  getUserLanguage(telegramId: string): Promise<string | null>;
+export interface IUser {
+  telegramId: string;
+  language: SupportedLanguage;
+  region: VenezuelaRegion;
+  wallet?: {
+    address: string;
+    privateKey: string;
+  };
+  lastActive?: Date;
 }
 
-const userModel: IUserModel = {
-  async findByTelegramId(telegramId: string) {
-    const doc = await db.collection('users').doc(telegramId).get();
-    return doc.exists ? (doc.data() as IUser) : null;
-  },
+export class User {
+  private static collection = db.collection('users');
 
-  async createUser(userData) {
-    const user: IUser = {
-      telegramId: userData.telegramId,
-      region: userData.region as keyof typeof VENEZUELA_REGIONS,
-      language: userData.language,
-      wallet: {
-        ...userData.wallet,
-        createdAt: new Date()
-      },
-      lastActive: new Date(),
-      createdAt: new Date()
+  private static docToUser(doc: DocumentSnapshot<DocumentData>): IUser {
+    const data = doc.data();
+    if (!data) throw new Error('Document does not exist');
+    
+    return {
+      telegramId: data.telegramId,
+      language: data.language,
+      region: data.region,
+      wallet: data.wallet,
+      lastActive: data.lastActive ? new Date(data.lastActive._seconds * 1000) : undefined
     };
-
-    await db.collection('users').doc(userData.telegramId).set(user, { merge: true });
-    return user;
-  },
-
-  async setUserLanguage(telegramId: string, language: 'es' | 'en') {
-    const ref = db.collection('users').doc(telegramId);
-    await ref.update({ language });
-    const doc = await ref.get();
-    return doc.exists ? (doc.data() as IUser) : null;
-  },
-
-  async getUserLanguage(telegramId: string) {
-    const doc = await db.collection('users').doc(telegramId).get();
-    return doc.exists ? (doc.data() as IUser).language : null;
   }
-};
 
-export default userModel;
+  /**
+   * Encuentra un usuario por cualquier filtro
+   */
+  static async findOne(filter: Partial<IUser>) {
+    try {
+      let query: Query<DocumentData> | CollectionReference<DocumentData> = this.collection;
+      
+      // Aplicar filtros dinámicamente
+      Object.entries(filter).forEach(([key, value]) => {
+        query = query.where(key, '==', value);
+      });
+
+      const snapshot = await query.limit(1).get();
+      if (snapshot.empty) return null;
+
+      return this.docToUser(snapshot.docs[0]);
+    } catch (error) {
+      console.error('Error in findOne:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Encuentra múltiples usuarios por filtro
+   */
+  static async find(filter: Partial<IUser> = {}) {
+    try {
+      let query: Query<DocumentData> | CollectionReference<DocumentData> = this.collection;
+      
+      Object.entries(filter).forEach(([key, value]) => {
+        query = query.where(key, '==', value);
+      });
+
+      const snapshot = await query.get();
+      return snapshot.docs.map(doc => this.docToUser(doc));
+    } catch (error) {
+      console.error('Error in find:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Crea o actualiza un usuario
+   */
+  static async upsert(telegramId: string, data: Partial<IUser>) {
+    try {
+      const ref = this.collection.doc(telegramId);
+      const updateData = {
+        ...data,
+        lastActive: new Date()
+      };
+
+      await ref.set(updateData, { merge: true });
+      const doc = await ref.get();
+      return this.docToUser(doc);
+    } catch (error) {
+      console.error('Error in upsert:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtiene estadísticas agrupadas
+   */
+  static async getStats(groupBy: keyof IUser) {
+    try {
+      const snapshot = await this.collection.get();
+      return snapshot.docs.reduce((acc, doc) => {
+        const data = doc.data();
+        const key = data[groupBy];
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+    } catch (error) {
+      console.error('Error in getStats:', error);
+      throw error;
+    }
+  }
+}

@@ -1,12 +1,13 @@
-import userModel, { IUserModel } from './user';
-import groupModel, { IGroupModel } from './group';
-import { IUser, IGroup } from './types';
+import { User, IUser } from './user';
+import { Group, IGroup } from './group';
 
-export const User = userModel;
-export const Group = groupModel;
+// Exportar modelos
+export { User, Group };
 
-export type { IUser, IUserModel, IGroup, IGroupModel };
+// Exportar interfaces
+export type { IUser, IGroup };
 
+// Exportar objeto de modelos
 export const Models = {
   User,
   Group

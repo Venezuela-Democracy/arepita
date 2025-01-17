@@ -1,6 +1,8 @@
 # Variables
-RAILWAY := railway
-ENV_FILE := .env
+GIT_SHA := $(shell git rev-parse --short=7 HEAD)
+PROJECT_ID := spanish-catalyst
+REGION := us-central1
+SERVICE_NAME := telegram-bot
 
 # Colores
 BLUE := \033[0;34m
@@ -9,100 +11,111 @@ RED := \033[0;31m
 YELLOW := \033[1;33m
 RESET := \033[0m
 
-# Telegram Bot Commands
-.PHONY: telegram-setup telegram-setup-env telegram-setup-domain telegram-deploy telegram-set-webhook telegram-all telegram-init
+# Comandos básicos
+setup:
+	@echo "$(BLUE)🔧 Installing dependencies...$(RESET)"
+	@npm install
 
-# Comandos de configuración inicial (solo se usan una vez)
-telegram-setup:
-	@echo "$(BLUE)🔗 Configurando proyecto en Railway...$(RESET)"
-	@$(RAILWAY) login
-	@$(RAILWAY) link
-	@echo "$(GREEN)✅ Proyecto vinculado correctamente$(RESET)"
+clean:
+	@echo "$(BLUE)🧹 Cleaning build files...$(RESET)"
+	@rm -rf dist
+	@rm -rf build
 
-telegram-setup-env:
-	@echo "$(BLUE)🔧 Configurando variables de entorno en Railway...$(RESET)"
-	@if [ ! -f $(ENV_FILE) ]; then \
-		echo "$(RED)❌ Error: Archivo .env no encontrado$(RESET)"; \
+build: clean
+	@echo "$(BLUE)🏗️  Building project...$(RESET)"
+	@npm run build
+
+dev: build
+	@echo "$(BLUE)🚀 Running in development mode...$(RESET)"
+	@npm run dev
+
+# Comandos de Docker
+docker-build:
+	@echo "$(BLUE)🐳 Building Docker image...$(RESET)"
+	@docker build -t $(SERVICE_NAME):$(GIT_SHA) .
+
+docker-run: docker-build
+	@echo "$(BLUE)🐳 Running Docker container locally...$(RESET)"
+	@docker run --env-file .env -p 8080:8080 $(SERVICE_NAME):$(GIT_SHA)
+
+# Comandos de Cloud Run
+deploy: build check-env
+	@echo "$(BLUE)🚀 Deploying to Cloud Run...$(RESET)"
+	@docker buildx build --platform linux/amd64 \
+		-t gcr.io/$(PROJECT_ID)/$(SERVICE_NAME):$(GIT_SHA) . --push
+
+	@gcloud secrets versions add $(SERVICE_NAME)-env \
+		--data-file .env \
+		|| gcloud secrets create $(SERVICE_NAME)-env \
+		--data-file .env
+
+	@gcloud run deploy $(SERVICE_NAME) \
+		--image gcr.io/$(PROJECT_ID)/$(SERVICE_NAME):$(GIT_SHA) \
+		--region $(REGION) \
+		--update-env-vars "$$(gcloud secrets versions access latest --secret $(SERVICE_NAME)-env | tr '\n' ',')" \
+		--allow-unauthenticated \
+		--memory 2Gi \
+		--cpu 2 \
+		--min-instances 1 \
+		--max-instances 2
+
+	@echo "$(GREEN)✅ Deployment successful$(RESET)"
+	@make set-webhook
+
+# Comandos de Webhook
+check-env:
+	@echo "$(BLUE)🔍 Checking environment variables...$(RESET)"
+	@if [ ! -f .env ]; then \
+		echo "$(RED)❌ Error: .env file not found$(RESET)"; \
 		exit 1; \
 	fi
-	@echo "$(BLUE)Leyendo variables del .env...$(RESET)"
-	@grep -v '^#' $(ENV_FILE) | grep -v '^$$' | grep -vE '^(NODE_ENV|PORT)=' | while IFS='=' read -r key value; do \
-		$(RAILWAY) variables --set "$$key=$$value"; \
-	done
-	@$(RAILWAY) variables --set "NODE_ENV=production"
-	@echo "$(GREEN)✅ Variables de entorno configuradas$(RESET)"
-
-telegram-setup-domain:
-	@echo "$(BLUE)🌐 Configurando dominio...$(RESET)"
-	@domain=$$($(RAILWAY) domain | grep "https://" | cut -d' ' -f2); \
-	if [ -n "$$domain" ]; then \
-		$(RAILWAY) variables --set "WEBHOOK_DOMAIN=$$domain"; \
-		echo "$(GREEN)✅ Dominio configurado: $$domain$(RESET)"; \
-	else \
-		echo "$(RED)❌ Error: No se pudo obtener el dominio$(RESET)"; \
+	@if ! grep -q "BOT_TOKEN=" .env; then \
+		echo "$(RED)❌ Error: BOT_TOKEN not found in .env$(RESET)"; \
 		exit 1; \
 	fi
-
-telegram-check-vars:
-	@echo "$(BLUE)🔍 Verificando variables...$(RESET)"
-	@if ! $(RAILWAY) variables --json >/dev/null 2>&1; then \
-		echo "$(RED)❌ Error: No se pueden obtener las variables. ¿Estás conectado a Railway?$(RESET)"; \
+	@if ! grep -q "WEBHOOK_SECRET=" .env; then \
+		echo "$(RED)❌ Error: WEBHOOK_SECRET not found in .env$(RESET)"; \
 		exit 1; \
 	fi
-	@vars=$$($(RAILWAY) variables --json); \
-	webhook_domain=$$(echo "$$vars" | jq -r '.WEBHOOK_DOMAIN // "no configurado"'); \
-	bot_token=$$(echo "$$vars" | jq -r '.BOT_TOKEN // "no configurado"'); \
-	webhook_secret=$$(echo "$$vars" | jq -r '.WEBHOOK_SECRET // "no configurado"'); \
-	echo "Variables configuradas:"; \
-	echo "  WEBHOOK_DOMAIN: $$webhook_domain"; \
-	echo "  BOT_TOKEN: $$(echo $$bot_token | cut -c1-10)..."; \
-	echo "  WEBHOOK_SECRET: $$(echo $$webhook_secret | cut -c1-10)..."; \
-	if [ "$$webhook_domain" = "no configurado" ] || [ "$$bot_token" = "no configurado" ] || [ "$$webhook_secret" = "no configurado" ]; then \
-		echo "$(RED)❌ Faltan variables por configurar$(RESET)"; \
-		exit 1; \
-	else \
-		echo "$(GREEN)✅ Todas las variables están configuradas$(RESET)"; \
-	fi
-# Comandos de uso diario
-telegram-deploy: telegram-setup-env
-	@echo "$(BLUE)🚀 Desplegando bot a Railway...$(RESET)"
-	@$(RAILWAY) up -d
-	@echo "$(GREEN)✅ Bot desplegado correctamente$(RESET)"
+	@echo "$(GREEN)✅ Environment variables OK$(RESET)"
 
-telegram-set-webhook: telegram-setup-domain
-	@echo "$(BLUE)🔗 Configurando webhook del bot...$(RESET)"
-	@vars=$$($(RAILWAY) variables --json); \
-	webhook_domain=$$(echo "$$vars" | jq -r '.WEBHOOK_DOMAIN'); \
-	bot_token=$$(echo "$$vars" | jq -r '.BOT_TOKEN'); \
-	webhook_secret=$$(echo "$$vars" | jq -r '.WEBHOOK_SECRET'); \
-	echo "$(BLUE)Verificando variables:$(RESET)"; \
-	echo "  WEBHOOK_DOMAIN: $$webhook_domain"; \
-	echo "  BOT_TOKEN: $$(echo $$bot_token | cut -c1-10)..."; \
-	echo "  WEBHOOK_SECRET: $$(echo $$webhook_secret | cut -c1-10)..."; \
-	echo "$(BLUE)Configurando webhook...$(RESET)"; \
+get-url:
+	@echo "$(BLUE)🔍 Getting Cloud Run URL...$(RESET)"
+	@url=$$(gcloud run services describe $(SERVICE_NAME) --region $(REGION) --format 'value(status.url)'); \
+	echo "$$url" > .url; \
+	echo "$(GREEN)✅ Service URL: $$url$(RESET)"
+
+set-webhook: get-url
+	@echo "$(BLUE)🔗 Setting up Telegram webhook...$(RESET)"
+	@url=$$(cat .url); \
+	bot_token=$$(grep BOT_TOKEN .env | cut -d '=' -f2); \
+	webhook_secret=$$(grep WEBHOOK_SECRET .env | cut -d '=' -f2); \
 	response=$$(curl -s -X POST \
 		-H "Content-Type: application/json" \
-		-d "{\"url\":\"$$webhook_domain/api/telegram/webhook\", \"secret_token\":\"$$webhook_secret\"}" \
+		-d "{\"url\":\"$$url/api/telegram/webhook\", \"secret_token\":\"$$webhook_secret\"}" \
 		"https://api.telegram.org/bot$$bot_token/setWebhook"); \
-	if echo "$$response" | jq -e '.ok' >/dev/null; then \
-		echo "$(GREEN)✅ Webhook configurado correctamente$(RESET)"; \
+	if echo "$$response" | grep -q '"ok":true'; then \
+		echo "$(GREEN)✅ Webhook configured successfully$(RESET)"; \
 	else \
-		echo "$(RED)❌ Error configurando webhook:$(RESET)"; \
-		echo "$$response" | jq '.'; \
-		echo "$(YELLOW)Posibles problemas:$(RESET)"; \
-		echo "1. Token del bot inválido"; \
-		echo "2. URL del webhook mal formada"; \
-		echo "3. Webhook secret inválido"; \
+		echo "$(RED)❌ Error configuring webhook:$(RESET)"; \
+		echo "$$response"; \
 		exit 1; \
 	fi
 
-# Comandos principales
-telegram-init: telegram-setup telegram-setup-env telegram-setup-domain telegram-deploy telegram-set-webhook
-telegram-all: telegram-deploy telegram-set-webhook
+delete-webhook:
+	@echo "$(BLUE)🔗 Deleting Telegram webhook...$(RESET)"
+	@bot_token=$$(grep BOT_TOKEN .env | cut -d '=' -f2); \
+	curl -s -X POST "https://api.telegram.org/bot$$bot_token/deleteWebhook"; \
+	echo "$(GREEN)✅ Webhook deleted$(RESET)"
 
-# Utilidades
-telegram-delete-webhook:
-	@echo "$(BLUE)🔗 Eliminando webhook del bot...$(RESET)"
-	@bot_token=$$($(RAILWAY) variables --json | grep -o '"BOT_TOKEN":"[^"]*' | cut -d'"' -f4); \
-	curl -X POST "https://api.telegram.org/bot$$bot_token/deleteWebhook"
-	@echo "$(GREEN)✅ Webhook eliminado correctamente$(RESET)"
+destroy:
+	@echo "$(BLUE)🗑️  Destroying Cloud Run service...$(RESET)"
+	@make delete-webhook || true
+	@gcloud run services delete $(SERVICE_NAME) --region $(REGION) --quiet || true
+	@gcloud secrets delete $(SERVICE_NAME)-env --quiet || true
+	@echo "$(GREEN)✅ Service destroyed$(RESET)"
+
+# Comandos principales
+init: setup deploy
+
+.PHONY: setup clean build dev docker-build docker-run deploy check-env get-url set-webhook delete-webhook destroy init

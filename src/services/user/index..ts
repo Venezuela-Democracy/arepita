@@ -1,25 +1,17 @@
 import { User, IUser } from '../../models';
-import { VenezuelaRegion } from '../../bot/types';
+import { VenezuelaRegion, SupportedLanguage } from '../../bot/types';
 import { FlowAuthData } from './types';
-import { SupportedLanguage } from '../../bot/types';
-
-
 
 export class UserService {
   /**
    * Busca un usuario por su Telegram ID
    */
-  static async findByTelegramId(telegramId: string): Promise<IUser | null> {
-    try {
-      return await User.findByTelegramId(telegramId);
-    } catch (error) {
-      console.error('Error finding user by telegram ID:', error);
-      throw error;
-    }
+  static async findByTelegramId(telegramId: string) {
+    return User.findOne({ telegramId });
   }
 
   /**
-   * Crea un nuevo usuario
+   * Crea o actualiza un usuario
    */
   static async createUser(userData: {
     telegramId: string;
@@ -29,144 +21,89 @@ export class UserService {
       address: string;
       privateKey: string;
     };
-  }): Promise<IUser> {
-    try {
-      return await User.createUser(userData);
-    } catch (error) {
-      console.error('Error creating user:', error);
-      throw error;
-    }
+  }) {
+    return User.upsert(userData.telegramId, userData);
   }
 
   /**
    * Actualiza la última actividad del usuario
    */
-  static async updateLastActive(telegramId: string): Promise<void> {
-    try {
-      await User.updateOne(
-        { telegramId },
-        { $set: { lastActive: new Date() } }
-      );
-    } catch (error) {
-      console.error('Error updating last active:', error);
-      throw error;
-    }
+  static async updateLastActive(telegramId: string) {
+    return User.upsert(telegramId, { lastActive: new Date() });
   }
 
   /**
    * Obtiene la dirección de la wallet del usuario
    */
   static async getWalletAddress(telegramId: string): Promise<string | null> {
-    try {
-      const user = await User.findByTelegramId(telegramId);
-      return user?.wallet.address || null;
-    } catch (error) {
-      console.error('Error getting wallet address:', error);
-      throw error;
-    }
+    const user = await User.findOne({ telegramId });
+    return user?.wallet?.address || null;
   }
 
+  /**
+   * Obtiene la clave privada de la wallet del usuario
+   */
   static async getPrivateKey(telegramId: string): Promise<string | null> {
-    try {
-      const user = await User.findByTelegramId(telegramId);
-      return user?.wallet.privateKey || null;
-    } catch (error) {
-      console.error('Error getting wallet private key:', error);
-      throw error;
-    }
+    const user = await User.findOne({ telegramId });
+    return user?.wallet?.privateKey || null;
   }
 
   /**
    * Verifica si un usuario está registrado
    */
   static async isRegistered(telegramId: string): Promise<boolean> {
-    try {
-      const user = await User.findByTelegramId(telegramId);
-      if (!user || !user.wallet || !user.wallet.address) {
-        return false;
-      }
-      return true;
-    } catch (error) {
-      console.error('Error checking registration:', error);
-      throw error;
-    }
+    const user = await User.findOne({ telegramId });
+    return !!(user?.wallet?.address);
   }
 
   /**
    * Obtiene usuarios por región
    */
-  static async getUsersByRegion(region: VenezuelaRegion): Promise<IUser[]> {
-    try {
-      return await User.find({ region });
-    } catch (error) {
-      console.error('Error getting users by region:', error);
-      throw error;
-    }
+  static async getUsersByRegion(region: VenezuelaRegion) {
+    return User.find({ region });
   }
 
   /**
    * Obtiene estadísticas de usuarios por región
    */
   static async getRegionStats(): Promise<Record<VenezuelaRegion, number>> {
-    try {
-      const stats = await User.aggregate([
-        {
-          $group: {
-            _id: '$region',
-            count: { $sum: 1 }
-          }
-        }
-      ]);
-
-      return stats.reduce((acc, curr) => {
-        acc[curr._id as VenezuelaRegion] = curr.count;
-        return acc;
-      }, {} as Record<VenezuelaRegion, number>);
-    } catch (error) {
-      console.error('Error getting region stats:', error);
-      throw error;
-    }
+    return User.getStats('region') as Promise<Record<VenezuelaRegion, number>>;
   }
 
-    /**
-   * Obtiene los datos de autenticación necesarios para transacciones Flow/Cadence
-   * Solo usar este método para operaciones que requieran firmar transacciones
+  /**
+   * Obtiene los datos de autenticación para Flow
    */
-    static async getFlowAuthData(telegramId: string): Promise<FlowAuthData | null> {
-      try {
-        const user = await User.findOne({ telegramId })
-          .select('+wallet.privateKey')
-          .lean();
-  
-        if (!user) return null;
-  
-        return {
-          address: user.wallet.address,
-          privateKey: user.wallet.privateKey,
-          keyId: 0  // Por defecto usamos keyId 0
-        };
-      } catch (error) {
-        console.error('Error getting Flow auth data:', error);
-        throw error;
-      }
-    }
+  static async getFlowAuthData(telegramId: string): Promise<FlowAuthData | null> {
+    const user = await User.findOne({ telegramId });
+    if (!user?.wallet) return null;
 
-    static async getRegion(telegramId: string): Promise<VenezuelaRegion | null> {
-      try {
-        const user = await User.findByTelegramId(telegramId);
-        return user?.region || null;
-      } catch (error) {
-        console.error('Error getting user region:', error);
-        throw error;
-      }
-    }
-      static async getUserLanguage(telegramId: string): Promise<SupportedLanguage | null> {
-        const language = await User.getUserLanguage(telegramId) as SupportedLanguage;
-        return language || null;
-      }
-    
-      static async setUserLanguage(telegramId: string, language: SupportedLanguage): Promise<void> {
-        await User.setUserLanguage(telegramId, language);
-      }
-    
+    return {
+      address: user.wallet.address,
+      privateKey: user.wallet.privateKey,
+      keyId: 0
+    };
+  }
+
+  /**
+   * Obtiene la región del usuario
+   */
+  static async getRegion(telegramId: string): Promise<VenezuelaRegion | null> {
+    const user = await User.findOne({ telegramId });
+    return user?.region || null;
+  }
+
+  /**
+   * Obtiene el idioma del usuario
+   */
+  static async getUserLanguage(telegramId: string): Promise<SupportedLanguage | null> {
+    const user = await User.findOne({ telegramId });
+    return user?.language || null;
+  }
+
+  /**
+   * Actualiza el idioma del usuario
+   */
+  static async setUserLanguage(telegramId: string, language: SupportedLanguage) {
+    return User.upsert(telegramId, { language });
+  }
 }

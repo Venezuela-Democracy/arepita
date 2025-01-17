@@ -1,15 +1,14 @@
 import { ENV } from './src/config/env';
-import { TelegramBot , registerCommands} from './src/bot';
+import { TelegramBot } from './src/bot';
 import { createServer } from './src/server';
-import { connectDB } from './src/config/database';
+import { connectDB } from './src/config/firebase';
 import { initializeFlow } from './src/wallet';
-import mongoose from 'mongoose';
 
 async function bootstrap() {
   try {
-    // Conectar a MongoDB
+    // Conectar a Firestore
     await connectDB();
-    console.log('📦 MongoDB conectado exitosamente');
+    console.log('📦 Firestore conectado exitosamente');
 
     // Inicializar Flow
     initializeFlow();
@@ -23,7 +22,7 @@ async function bootstrap() {
       await telegramBot.launch();
     } else {
       console.log('🚀 Starting bot in production mode (webhook)');
-      const app = createServer(telegramBot);
+      const app = await createServer(telegramBot);
       
       app.listen(ENV.PORT, () => {
         console.log(`🌐 Server is running on port ${ENV.PORT}`);
@@ -35,7 +34,6 @@ async function bootstrap() {
     const gracefulShutdown = async (signal: string) => {
       console.log(`\n${signal} recibido. Cerrando servicios...`);
       await telegramBot.stop(signal);
-      await mongoose.connection.close();
       process.exit(0);
     };
 
