@@ -9,7 +9,7 @@ export class FlowWallet {
   private ec: EC;
   private serviceAccount: typeof flowConfig.serviceAccount;
   private INITIAL_FUNDING = "5.0";
-  private NFT_CONTRACT_NAME = "VenezuelaNFT_16";
+  private NFT_CONTRACT_NAME = "VenezuelaNFT_17";
 
   constructor() {
     this.ec = new EC('p256');

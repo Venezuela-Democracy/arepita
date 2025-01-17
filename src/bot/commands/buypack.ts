@@ -198,7 +198,7 @@ function formatNFTRevealMessage(metadata: any, cardType: string, userLanguage: '
   message += `━━━━━━━━━━━━━━━\n\n`;
 
   switch (cardType) {
-    case 'A.826dae42290107c3.VenezuelaNFT_16.LocationCard':
+    case 'A.826dae42290107c3.VenezuelaNFT_17.LocationCard':
       message += `📍 *${labels[userLanguage].location}*\n`;
       message += `🌎 ${labels[userLanguage].region}: ${metadata.region}\n`;
       message += `━━━━ ${labels[userLanguage].stats} ━━━━\n`;
@@ -207,7 +207,7 @@ function formatNFTRevealMessage(metadata: any, cardType: string, userLanguage: '
       message += `🎯 ${labels[userLanguage].specialty}: ${metadata.type}\n`;
       break;
 
-    case 'A.826dae42290107c3.VenezuelaNFT_16.CharacterCard':
+    case 'A.826dae42290107c3.VenezuelaNFT_17.CharacterCard':
       message += `👤 *${labels[userLanguage].character}*\n`;
       message += `🎭 ${labels[userLanguage].class}: ${metadata.characterTypes.join(' / ')}\n`;
       message += `━━━━ ${labels[userLanguage].stats} ━━━━\n`;
@@ -229,7 +229,7 @@ function formatNFTRevealMessage(metadata: any, cardType: string, userLanguage: '
       }
       break;
 
-    case 'A.826dae42290107c3.VenezuelaNFT_16.CulturalItemCard':
+    case 'A.826dae42290107c3.VenezuelaNFT_17.CulturalItemCard':
       message += `🎨 *${labels[userLanguage].cultural}*\n`;
       message += `🎯 ${labels[userLanguage].category}: ${metadata.type}\n`;
       message += `━━━━ ${labels[userLanguage].stats} ━━━━\n`;

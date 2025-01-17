@@ -27,8 +27,8 @@ export class User {
     if (!data) throw new Error('Document does not exist');
     
     return {
-      telegramId: data.telegramId,
-      language: data.language,
+      telegramId: data?.telegramId || doc.id, // Primero intentamos el campo, luego el ID
+      language: data?.language || 'es', // Aseguramos que siempre haya un idioma
       region: data.region,
       wallet: data.wallet,
       lastActive: data.lastActive ? new Date(data.lastActive._seconds * 1000) : undefined
@@ -83,10 +83,11 @@ export class User {
     try {
       const ref = this.collection.doc(telegramId);
       const updateData = {
+        telegramId,
         ...data,
         lastActive: new Date()
       };
-
+  
       await ref.set(updateData, { merge: true });
       const doc = await ref.get();
       return this.docToUser(doc);

@@ -97,6 +97,7 @@ export class UserService {
    */
   static async getUserLanguage(telegramId: string): Promise<SupportedLanguage | null> {
     const user = await User.findOne({ telegramId });
+    console.log('🌍 Idioma del usuario en UserService:', user?.language);
     return user?.language || null;
   }
 
