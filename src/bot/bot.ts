@@ -12,7 +12,9 @@ export class TelegramBot {
   private messageHandlers: Map<string, boolean> = new Map();
 
   constructor(token: string) {
-    this.bot = new Telegraf<BotContext>(token);
+    this.bot = new Telegraf<BotContext>(token, {
+      handlerTimeout: 180000 // 3 minutos para handlers
+    });
     this.groupManager = new TelegramGroupManager(this.bot); // Inicializar el manager
 
     // Configurar middleware de sesión

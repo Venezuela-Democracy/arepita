@@ -58,12 +58,6 @@ export const languageActionHandler = async (ctx: BotContext) => {
       { parse_mode: 'Markdown' }
     );
 
-    // Si el usuario no está registrado, mostrar el registro
-    const isRegistered = await UserService.isRegistered(telegramId);
-    if (!isRegistered) {
-      // Mostrar mensaje de registro en el idioma seleccionado
-      await registerHandler(ctx);
-    }
   } catch (error) {
     console.error('Error en language action:', error);
   }
