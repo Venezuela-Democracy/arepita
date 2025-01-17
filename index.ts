@@ -17,17 +17,21 @@ async function bootstrap() {
     // Iniciar bot de Telegram
     const telegramBot = new TelegramBot(ENV.BOT_TOKEN);
 
+    // Siempre crear el servidor Express
+    const app = createServer(telegramBot);
+    
+    // Iniciar el servidor
+    app.listen(ENV.PORT, () => {
+      console.log(`🌐 Server is running on port ${ENV.PORT}`);
+    });
+
+    // En desarrollo, usar polling además del servidor
     if (ENV.NODE_ENV === 'development') {
       console.log('🤖 Starting bot in development mode (polling)');
       await telegramBot.launch();
     } else {
       console.log('🚀 Starting bot in production mode (webhook)');
-      const app = await createServer(telegramBot);
-      
-      app.listen(ENV.PORT, () => {
-        console.log(`🌐 Server is running on port ${ENV.PORT}`);
-        console.log(`📡 Webhook URL: ${ENV.WEBHOOK_DOMAIN}/api/telegram/webhook`);
-      });
+      console.log(`📡 Webhook URL: ${ENV.WEBHOOK_DOMAIN}/api/telegram/webhook`);
     }
 
     // Manejadores de cierre
