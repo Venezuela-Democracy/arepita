@@ -11,11 +11,14 @@ import { TelegramGroupManager } from '../managers/group';
 import { collectionActionHandler, collectionHandler } from './colecction';
 import { languageActionHandler, startHandler } from './start';
 import { sellHandler, sellActionHandler, handlePrice } from './sell';
-
+import { buyPackActionHandler } from './buypack';
+import { revealHandler, revealActionHandler } from './reveal';
+import { narrativeHandler } from './narrative';
 export const registerCommands = (bot: Telegraf<BotContext>, groupManager: TelegramGroupManager) => {
     console.log('📝 Registrando comandos y eventos...');
 
     // Comandos básicos
+    bot.command([BOT_COMMANDS.NARRATIVE], narrativeHandler);
     bot.command([BOT_COMMANDS.START], startHandler);
     bot.action(/^language:(\w+)$/, languageActionHandler);
     bot.command([BOT_COMMANDS.REGISTER], registerHandler);
@@ -26,7 +29,10 @@ export const registerCommands = (bot: Telegraf<BotContext>, groupManager: Telegr
     bot.command(BOT_COMMANDS.WALLET, walletHandler);
     bot.command(BOT_COMMANDS.HELP, helpHandler);
     bot.command(BOT_COMMANDS.STATUS, statusHandler);
-    bot.command(BOT_COMMANDS.BUYPACK, buyPackHandler);
+    bot.command(BOT_COMMANDS.BUY_PACK, buyPackHandler);
+    bot.action(/^buy_pack:(\d+)$/, buyPackActionHandler);
+    bot.command(BOT_COMMANDS.REVEAL, revealHandler);
+    bot.action(/^reveal:(\d+)$/, revealActionHandler);
     bot.command(BOT_COMMANDS.SELL, sellHandler);
     bot.action(/^sell:(\w+)(?::(\w+))?(?::(\d+))?$/, sellActionHandler);
     bot.on('text', handlePrice);
@@ -54,7 +60,7 @@ export const registerCommands = (bot: Telegraf<BotContext>, groupManager: Telegr
             description: 'Wallet info / Info de wallet' 
         },
         { 
-            command: BOT_COMMANDS.BUYPACK, 
+            command: BOT_COMMANDS.BUY_PACK, 
             description: 'Buy NFT pack / Comprar pack de NFTs' 
         },
         { 
@@ -72,6 +78,10 @@ export const registerCommands = (bot: Telegraf<BotContext>, groupManager: Telegr
         { 
             command: BOT_COMMANDS.SELL, 
             description: 'Sell NFTs / Vender NFTs' 
+        },
+        { 
+            command: BOT_COMMANDS.REVEAL, 
+            description: 'Reveal NFT packs / Revelar packs de NFTs' 
         },
     ]);
 

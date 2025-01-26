@@ -5,9 +5,11 @@ export const BOT_COMMANDS = {
   BALANCE: 'balance',
   WALLET: 'wallet',
   REGISTER: 'register',
-  BUYPACK: 'buypack',
+  BUY_PACK: 'buypack',
   COLLECTION: 'collection',
   SELL: 'sell',
+  REVEAL: 'reveal',
+  NARRATIVE: 'narrative',
 } as const;
 
 export const ERROR_MESSAGES = {
@@ -170,7 +172,14 @@ SELL_NFT_SET_PRICE: '💵 Por favor, envía el precio en FLOW para este NFT:',
 SELL_NFT_CONFIRM: '⚠️ ¿Confirmas poner a la venta este NFT por {price} FLOW?',
 SELL_NFT_SUCCESS: '✅ NFT puesto a la venta exitosamente',
 SELL_NFT_ERROR: '❌ Error al poner el NFT a la venta',
-  },
+SELECT_PACK_AMOUNT: '🎴 Selecciona cuántos packs quieres comprar:',
+BUYING_PACKS_PROCESSING: '🔄 Comprando {amount} pack(s)...',
+PACKS_BOUGHT_SUCCESS: '✅ ¡Has comprado {amount} pack(s) exitosamente!\nTx ID: `{txId}`',
+USE_REVEAL_COMMAND: '💡 Usa /reveal para abrir tus packs',  
+NO_PACKS_TO_REVEAL: '❌ No tienes packs para revelar',
+PACKS_TO_REVEAL: '🎁 ¿Cuántos quieres abrir?',
+REVEALING_PACKS: '🔄 Revelando {amount} pack(s)...',
+},
 
   en: {
     WELCOME: `
@@ -312,5 +321,12 @@ SELL_NFT_SET_PRICE: '💵 Please send the price in FLOW for this NFT:',
 SELL_NFT_CONFIRM: '⚠️ Do you confirm listing this NFT for {price} FLOW?',
 SELL_NFT_SUCCESS: '✅ NFT successfully listed for sale',
 SELL_NFT_ERROR: '❌ Error listing NFT for sale',
+SELECT_PACK_AMOUNT: '🎴 Select how many packs you want to buy:',
+BUYING_PACKS_PROCESSING: '🔄 Buying {amount} pack(s)...',
+PACKS_BOUGHT_SUCCESS: '✅ Successfully bought {amount} pack(s)!\nTx ID: `{txId}`',
+USE_REVEAL_COMMAND: '💡 Use /reveal to open your packs',
+NO_PACKS_TO_REVEAL: '❌ You have no packs to reveal',
+PACKS_TO_REVEAL: '🎁  How many do you want to open?',
+REVEALING_PACKS: '🔄 Revealing {amount} pack(s)...',
 }
 } as const;

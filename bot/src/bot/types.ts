@@ -24,6 +24,7 @@ export interface BotSession {
 // Extender el contexto con nuestra sesión
 export interface BotContext extends Context {
   session?: BotSession;
+  match?: RegExpExecArray;
 }
 
 export interface CommandConfig {

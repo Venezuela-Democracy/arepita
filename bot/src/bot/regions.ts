@@ -1,9 +1,9 @@
 export const VENEZUELA_REGIONS = {
-    AMAZONAS: 'Amazonas',
+    //AMAZONAS: 'Amazonas',
     ANZOATEGUI: 'Anzoategui',
     APURE: 'Apure',
     ARAGUA: 'Aragua',
-    BARINAS: 'Barinas',
+    //BARINAS: 'Barinas',
     BOLIVAR: 'Bolivar',
     CARABOBO: 'Carabobo',
     COJEDES: 'Cojedes',

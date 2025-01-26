@@ -56,11 +56,10 @@ deploy: build check-env
 		--region $(REGION) \
 		--update-env-vars "$$(gcloud secrets versions access latest --secret $(SERVICE_NAME)-env | tr '\n' ',')" \
 		--allow-unauthenticated \
-		--memory 2Gi \
+		--memory 8Gi \
 		--cpu 2 \
 		--min-instances 1 \
 		--max-instances 1 \
-		--concurrency 80
 
 	@echo "$(GREEN)✅ Deployment successful$(RESET)"
 	@make set-webhook

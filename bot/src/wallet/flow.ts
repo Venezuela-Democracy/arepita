@@ -2,14 +2,14 @@ import * as fcl from "@onflow/fcl";
 import { ec as EC } from "elliptic";
 import { SHA3 } from "sha3";
 import { flowConfig } from './config';
-import { FlowAuthorization, WalletResponse} from "./types";
+import { WalletResponse} from "./types";
 import { CREATE_LISTING_TRANSACTION, PURCHASE_LISTING_TRANSACTION, SETUP_STOREFRONT_TRANSACTION } from "./transactions";
 
 export class FlowWallet {
   private ec: EC;
   private serviceAccount: typeof flowConfig.serviceAccount;
-  private INITIAL_FUNDING = "5.0";
-  private NFT_CONTRACT_NAME = "VenezuelaNFT_17";
+  private INITIAL_FUNDING = "50.0";
+  private NFT_CONTRACT_NAME = "VenezuelaNFT_19";
 
   constructor() {
     this.ec = new EC('p256');
@@ -69,55 +69,6 @@ export class FlowWallet {
     }
   }
 
-  async setupCollection(userAddress: string, privateKey: string): Promise<string> {
-    try {
-      const authorization = await this.getAuthorization({
-        address: userAddress,
-        privateKey: privateKey
-      });
-  
-      const transactionId = await fcl.mutate({
-        cadence: `
-          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-          import NonFungibleToken from ${flowConfig.nonFungibleToken}
-          import MetadataViews from ${flowConfig.metadataViews}
-  
-          transaction {
-            prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue, UnpublishCapability) &Account) {
-              let collectionData = ${this.NFT_CONTRACT_NAME}.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
-                ?? panic("ViewResolver does not resolve NFTCollectionData view")
-  
-              // Return early if the account already has a collection
-              if signer.storage.borrow<&${this.NFT_CONTRACT_NAME}.Collection>(from: collectionData.storagePath) != nil {
-                return
-              }
-  
-              // Create a new empty collection
-              let collection <- ${this.NFT_CONTRACT_NAME}.createEmptyCollection(nftType: Type<@${this.NFT_CONTRACT_NAME}.NFT>())
-  
-              // save it to the account
-              signer.storage.save(<-collection, to: collectionData.storagePath)
-  
-              // the old "unlink"
-              let oldLink = signer.capabilities.unpublish(collectionData.publicPath)
-              // create a public capability for the collection
-              let collectionCap = signer.capabilities.storage.issue<&${this.NFT_CONTRACT_NAME}.Collection>(collectionData.storagePath)
-              signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
-            }
-          }
-        `,
-        payer: authorization,
-        proposer: authorization,
-        authorizations: [authorization],
-        limit: 999
-      });
-  
-      return transactionId;
-    } catch (error) {
-      console.error('Error setting up collection:', error);
-      throw new Error('Failed to setup collection');
-    }
-  }
 
   async createWallet(): Promise<WalletResponse> {
     try {
@@ -200,9 +151,6 @@ export class FlowWallet {
           const txId = await this.fundWallet(newAddress, this.INITIAL_FUNDING);
           await fcl.tx(txId).onceSealed();
           console.log(`✅ Wallet ${newAddress} fondeada exitosamente`);
-          const setupTxId = await this.setupCollection(newAddress, privateKey);
-          await fcl.tx(setupTxId).onceSealed();
-          console.log(`✅ Colección NFT configurada para ${newAddress}`);
         } catch (fundingError) {
           console.error('❌ Error en el fondeo inicial:', fundingError);
         }
@@ -314,7 +262,7 @@ export class FlowWallet {
     }
   }
 
-  async buyPack(userAddress: string, privateKey: string): Promise<string> {
+  async buyPack(userAddress: string, privateKey: string, amount: number = 1): Promise<string> {
     try {
       const authorization = await this.getAuthorization({ 
         address: userAddress, 
@@ -329,32 +277,45 @@ export class FlowWallet {
           import FlowToken from ${flowConfig.flowToken}
           import FungibleToken from ${flowConfig.fungibleToken}
   
-          transaction(setID: UInt32) {
-            prepare(signer: auth(BorrowValue) &Account) {
-              let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
-                from: /storage/flowTokenVault
-              ) ?? panic("Flow Token vault not found")
+          transaction(setID: UInt32, amount: Int) {
+            prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue, UnpublishCapability) &Account) {
+              let collectionData = ${this.NFT_CONTRACT_NAME}.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
+                ?? panic("ViewResolver does not resolve NFTCollectionData view")
               
-              let receipt <- ${this.NFT_CONTRACT_NAME}.buyPackFlow(
-                setID: setID, 
-                payment: <- vaultRef.withdraw(amount: 1.0)
-              )
-              
-              // Check that I don't already have a receiptStorage
-              if signer.storage.type(at: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath) == nil {
-                  let storage <- ${this.NFT_CONTRACT_NAME}.createEmptyStorage()
-                  signer.storage.save(<- storage, to: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
+              if signer.storage.borrow<&${this.NFT_CONTRACT_NAME}.Collection>(from: collectionData.storagePath) == nil {
+                let collection <- ${this.NFT_CONTRACT_NAME}.createEmptyCollection(nftType: Type<@${this.NFT_CONTRACT_NAME}.NFT>())
+                signer.storage.save(<-collection, to: collectionData.storagePath)
+                let oldLink = signer.capabilities.unpublish(collectionData.publicPath)
+                let collectionCap = signer.capabilities.storage.issue<&${this.NFT_CONTRACT_NAME}.Collection>(collectionData.storagePath)
+                signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
               }
   
-              let storageRef = signer.storage.borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(
-                from: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath
-              ) ?? panic("Receipt storage not found")
+              if signer.storage.type(at: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath) == nil {
+                let storage <- ${this.NFT_CONTRACT_NAME}.createEmptyStorage()
+                signer.storage.save(<- storage, to: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
+                let storageCap = signer.capabilities.storage.issue<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
+                signer.capabilities.publish(storageCap, at: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePublic)
+              }
+  
+              let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
+                ?? panic("Could not borrow Flow Token Vault reference")
+  
+              let storageRef = signer.storage.borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(from: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
+                ?? panic("Cannot borrow a reference to the recipient's VenezuelaNFT ReceiptStorage")
               
-              storageRef.deposit(receipt: <- receipt)
+              var counter = 0
+              while counter < amount {
+                let receipt <- ${this.NFT_CONTRACT_NAME}.buyPackFlow(setID: setID, payment: <- vaultRef.withdraw(amount: 1.0))
+                storageRef.deposit(receipt: <- receipt)
+                counter = counter + 1
+              }
             }
           }
         `,
-        args: (arg: any, t: any) => [arg(0, t.UInt32)],
+        args: (arg: any, t: any) => [
+          arg(0, t.UInt32),
+          arg(amount, t.Int)
+        ],
         payer: authorization,
         proposer: authorization,
         authorizations: [authorization],
@@ -722,6 +683,73 @@ console.log('Clasificación final:', {
     } catch (error) {
       console.error('Error purchasing listing:', error);
       throw new Error('Failed to purchase listing');
+    }
+  }
+
+  async getUnrevealedPacks(address: string): Promise<number> {
+    try {
+      const packs = await fcl.query({
+        cadence: `
+          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
+  
+          access(all) fun main(account: Address): Int {
+            let account = getAccount(account)
+            let cap = account.capabilities
+              .borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(${this.NFT_CONTRACT_NAME}.ReceiptStoragePublic)!
+            return cap.getBalance()
+          }
+        `,
+        args: (arg: any, t: any) => [arg(address, t.Address)]
+      });
+  
+      return packs;
+    } catch (error) {
+      console.error('Error getting unrevealed packs:', error);
+      throw new Error('Failed to get unrevealed packs');
+    }
+  }
+  
+  async revealPacks(userAddress: string, privateKey: string, amount: number): Promise<string> {
+    try {
+      const authorization = await this.getAuthorization({ 
+        address: userAddress, 
+        privateKey: privateKey 
+      });
+  
+      const transactionId = await fcl.mutate({
+        cadence: `
+          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
+  
+          transaction(amount: Int) {
+            prepare(signer: auth(BorrowValue, LoadValue) &Account) {
+              let storageRef = signer.storage
+                .borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(from: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
+                ?? panic("Cannot borrow a reference to the recipient's VenezuelaNFT ReceiptStorage")
+  
+              var counter = 0
+              while counter < amount {
+                let receipt <- storageRef.withdraw()
+                ${this.NFT_CONTRACT_NAME}.revealPack(
+                  receipt: <- receipt, 
+                  minter: signer.address, 
+                  emptyDict: {}
+                )
+                counter = counter + 1
+              }
+            }
+          }
+        `,
+        args: (arg: any, t: any) => [arg(amount, t.Int)],
+        payer: authorization,
+        proposer: authorization,
+        authorizations: [authorization],
+        limit: 999
+      });
+  
+      return transactionId;
+    } catch (error) {
+      console.error('Error revealing packs:', error);
+      throw new Error('Failed to reveal packs');
     }
   }
 }
