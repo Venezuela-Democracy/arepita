@@ -1,0 +1,57 @@
+:root {
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+  
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    margin: 0;
+    display: flex;
+    min-width: 320px;
+    min-height: 100vh;
+  }
+  
+  #root {
+    width: 100%;
+  }
+  
+  button {
+    border: none;
+    outline: none;
+    background: none;
+    font-family: inherit;
+  }
+  
+  /* Telegram theme variables fallback */
+  :root {
+    --tg-theme-bg-color: #fff;
+    --tg-theme-text-color: #000;
+    --tg-theme-hint-color: #999;
+    --tg-theme-link-color: #2481cc;
+    --tg-theme-button-color: #2481cc;
+    --tg-theme-button-text-color: #fff;
+    --tg-theme-secondary-bg-color: #f4f4f5;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --tg-theme-bg-color: #1f1f1f;
+      --tg-theme-text-color: #fff;
+      --tg-theme-hint-color: #aaa;
+      --tg-theme-link-color: #64B5F6;
+      --tg-theme-button-color: #64B5F6;
+      --tg-theme-button-text-color: #fff;
+      --tg-theme-secondary-bg-color: #2c2c2c;
+    }
+  }
