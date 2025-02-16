@@ -42,12 +42,31 @@ api.interceptors.request.use((config) => {
 
 export const apiService = {
   getUserInfo: async (): Promise<ApiResponse<User>> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return {
-      success: true,
-      data: MOCK_DATA.user
-    };
+    try {
+      // Verificar si tenemos acceso a los datos de Telegram
+      if (!WebApp.initDataUnsafe?.user) {
+        throw new Error('No se pudo acceder a los datos del usuario de Telegram');
+      }
+
+      const telegramUser = WebApp.initDataUnsafe.user;
+      
+      const userData: User = {
+        id: telegramUser.id.toString(),
+        avatarUrl: telegramUser.photo_url || 'https://via.placeholder.com/150',
+        username: telegramUser.username || telegramUser.first_name
+      };
+
+      return {
+        success: true,
+        data: userData
+      };
+    } catch (error) {
+      console.error('Error al obtener información del usuario:', error);
+      return {
+        success: false,
+        error: 'Error al obtener información del usuario'
+      };
+    }
   },
 
   getWalletInfo: async (): Promise<ApiResponse<WalletInfo>> => {
