@@ -26,13 +26,16 @@ export const walletRoutes = () => {
   router.get('/:address/balance', async (req, res) => {
     try {
       const { address } = req.params;
+      console.log('💰 Getting balance for address:', address);
       const balance = await flowWallet.getBalance(address);
+      console.log('✅ Balance retrieved successfully:', balance);
       return res.json({
         success: true,
         data: { balance }
       });
     } catch (error) {
-      console.error('Error getting balance:', error);
+      console.error('❌ Error getting balance:', error);
+      console.error('🔍 Address attempted:', req.params.address);
       return res.status(500).json({
         success: false,
         error: 'Error getting wallet balance'

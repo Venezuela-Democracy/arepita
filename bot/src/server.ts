@@ -2,11 +2,28 @@ import express from 'express';
 import { TelegramBot } from './bot/bot';
 import { createRoutes } from './api/routes';
 import { errorHandler } from './api/middlewares/error';
-
+import cors from 'cors';
 export const createServer = (telegramBot: TelegramBot) => {
   const app = express();
 
   console.log('🚀 Iniciando servidor Express');
+
+  // Configurar CORS antes de cualquier ruta
+  app.use(cors({
+    origin: [
+      'https://venezuela-dao-miniapp.vercel.app',
+      'http://localhost:5173', // Para desarrollo local
+      'https://web.telegram.org' // Para el WebApp de Telegram
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type', 
+      'Authorization', 
+      'X-Telegram-Init-Data',
+      'x-telegram-init-data'
+    ],
+    credentials: true
+  }));
 
   // Middlewares
   app.use(express.json());

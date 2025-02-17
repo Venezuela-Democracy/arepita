@@ -11,9 +11,18 @@ import {
   RevealPacksRequest
 } from './types';
 
+
 // Configuración de axios
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Configuración de axios para los logs (Vercel)
+const logApi = axios.create({
+  baseURL: 'https://venezuela-dao-miniapp.vercel.app',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -28,16 +37,32 @@ api.interceptors.request.use((config) => {
 });
 
 export const apiService = {
+
+  sendLog: async (message: string, data?: any, level: 'info' | 'error' = 'info'): Promise<void> => {
+    try {
+      await logApi.post('/api/log', {
+        message,
+        data,
+        level,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      // Solo log local si falla el envío al servidor
+      console.error('Error sending log:', error);
+    }
+  },
+
   // User endpoints
   getUserInfo: async (): Promise<ApiResponse<User>> => {
     try {
+      await apiService.sendLog('Iniciando getUserInfo');
+      
       if (!WebApp.initDataUnsafe?.user) {
         throw new Error('No se pudo acceder a los datos del usuario de Telegram');
       }
 
       const telegramUser = WebApp.initDataUnsafe.user;
       
-      // Obtener información adicional del usuario desde nuestra API
       const { data: userApiData } = await api.get(`/users/${telegramUser.id}`);
       
       const userData: User = {
@@ -50,12 +75,13 @@ export const apiService = {
         hasWallet: !!userApiData?.data?.address
       };
 
+
       return {
         success: true,
         data: userData
       };
     } catch (error) {
-      console.error('Error al obtener información del usuario:', error);
+      await apiService.sendLog('Error en getUserInfo:', error, 'error');
       return {
         success: false,
         error: 'Error al obtener información del usuario'
@@ -66,17 +92,19 @@ export const apiService = {
 
   getBalance: async (address: string): Promise<ApiResponse<{ balance: number }>> => {
     try {
+      await apiService.sendLog('Fetching balance for address:', { address });
       const { data } = await api.get(`/wallet/${address}/balance`);
+      await apiService.sendLog('Balance response:', data);
       return data;
     } catch (error) {
-      console.error('Error al obtener balance:', error);
+      await apiService.sendLog('Error getting balance:', error, 'error');
       return {
         success: false,
         error: 'Error al obtener balance'
       };
     }
   },
-  
+
   // Wallet endpoints
   getWalletInfo: async (address: string): Promise<ApiResponse<WalletInfo>> => {
     try {
