@@ -47,13 +47,15 @@ const Address = styled.div`
 `;
 
 export const Header = () => {
-  const { user, balance, address } = useUser();
+  const { user, balance, hasWallet } = useUser();
   const [showCopied, setShowCopied] = useState(false);
 
   const copyAddress = async () => {
-    await navigator.clipboard.writeText(address);
-    setShowCopied(true);
-    setTimeout(() => setShowCopied(false), 2000);
+    if (user?.address) {
+      await navigator.clipboard.writeText(user.address);
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000);
+    }
   };
 
   const formatAddress = (addr: string) => 
@@ -63,23 +65,31 @@ export const Header = () => {
     <HeaderContainer>
       <UserInfo>
         <Avatar src={user?.avatarUrl} alt="User avatar" />
-        <WalletInfo>
-          <Balance>{balance?.toFixed(2)} FLOW</Balance>
-          <Address onClick={copyAddress}>
-            {formatAddress(address)}
-            <AnimatePresence>
-              {showCopied && (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  ✓ Copied
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </Address>
-        </WalletInfo>
+        {hasWallet ? (
+          <WalletInfo>
+            <Balance>{balance.toFixed(2)} FLOW</Balance>
+            <Address onClick={copyAddress}>
+              {user?.address ? formatAddress(user.address) : 'No wallet'}
+              <AnimatePresence>
+                {showCopied && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={{ marginLeft: '8px' }}
+                  >
+                    ✓ Copied
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </Address>
+          </WalletInfo>
+        ) : (
+          <WalletInfo>
+            <Balance>No Wallet</Balance>
+            <Address>Create a wallet to start</Address>
+          </WalletInfo>
+        )}
       </UserInfo>
     </HeaderContainer>
   );
