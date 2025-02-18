@@ -1,6 +1,6 @@
 import { useNFTCollection } from '../hooks/useNFTColecction';
 import styled, { keyframes } from 'styled-components';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 
 const shine = keyframes`
   0% { background-position: -200% center; }
@@ -13,6 +13,12 @@ const rarityGlow = {
   Rare: '#2196F3',
   Epic: '#9C27B0',
   Legendary: '#FFD700'
+};
+
+const typeColors = {
+  locations: '#FF5722',
+  characters: '#2196F3',
+  culturalItems: '#9C27B0'
 };
 
 const MainContainer = styled.div`
@@ -93,6 +99,16 @@ const NFTImage = styled.div<{ $url?: string }>`
   background-size: cover;
   background-position: center;
   position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100px;
+    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  }
 `;
 
 const Badge = styled.div`
@@ -103,12 +119,23 @@ const Badge = styled.div`
   font-weight: 600;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
+  z-index: 2;
 `;
 
 const RarityBadge = styled(Badge)<{ $rarity: string }>`
   top: 1rem;
   right: 1rem;
   color: ${props => rarityGlow[props.$rarity as keyof typeof rarityGlow] || '#fff'};
+`;
+
+const TypeBadge = styled(Badge)<{ $type: string }>`
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: ${props => typeColors[props.$type as keyof typeof typeColors]};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 `;
 
 const CountBadge = styled(Badge)`
@@ -146,30 +173,23 @@ const CardContent = styled.div`
   }
 `;
 
+const TitleContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+`;
+
 const Title = styled.h2`
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--tg-theme-text-color);
-  margin-bottom: 1rem;
 `;
 
 const Description = styled.p`
   color: var(--tg-theme-hint-color);
   font-size: 0.95rem;
   line-height: 1.5;
-  margin-bottom: 1rem;
-`;
-
-const ExpandButton = styled.button`
-  color: var(--tg-theme-link-color);
-  background: none;
-  border: none;
-  padding: 0;
-  margin-left: 0.5rem;
-  font: inherit;
-  cursor: pointer;
-  outline: inherit;
-  text-decoration: underline;
 `;
 
 const CategoryIndicator = styled.div`
@@ -189,10 +209,10 @@ const CategoryIndicator = styled.div`
   gap: 0.5rem;
 `;
 
-const TypeIcon = {
-  locations: '📍',
-  characters: '👤',
-  culturalItems: '🎨'
+const TypeInfo = {
+  locations: { icon: '📍', label: 'Lugar' },
+  characters: { icon: '👤', label: 'Personaje' },
+  culturalItems: { icon: '🎨', label: 'Cultura' }
 };
 
 export const CollectionPage = () => {
@@ -206,14 +226,6 @@ export const CollectionPage = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
-  const [showFullDescription, setShowFullDescription] = useState<Record<string, boolean>>({});
-
-  const toggleDescription = (id: string) => {
-    setShowFullDescription(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -276,6 +288,10 @@ export const CollectionPage = () => {
                       <RarityBadge $rarity={rarity}>
                         {rarity}
                       </RarityBadge>
+                      <TypeBadge $type={type}>
+                        {TypeInfo[type as keyof typeof TypeInfo].icon} 
+                        {TypeInfo[type as keyof typeof TypeInfo].label}
+                      </TypeBadge>
                       <CountBadge>
                         {nft.count} {nft.count > 1 ? 'copias' : 'copia'}
                       </CountBadge>
@@ -285,18 +301,11 @@ export const CollectionPage = () => {
                     </NFTImage>
                     
                     <CardContent>
-                      <Title>{nft.display.name}</Title>
+                      <TitleContainer>
+                        <Title>{nft.display.name}</Title>
+                      </TitleContainer>
                       <Description>
-                        {showFullDescription[nft.metadataId] 
-                          ? nft.display.description 
-                          : nft.display.description?.slice(0, 150)}
-                        {nft.display.description?.length && nft.display.description?.length > 150 && (
-                          <ExpandButton
-                            onClick={() => toggleDescription(nft.metadataId)}
-                          >
-                            {showFullDescription[nft.metadataId] ? 'Ver menos' : '... Ver más'}
-                          </ExpandButton>
-                        )}
+                        {nft.display.description}
                       </Description>
                     </CardContent>
                   </CardInner>
@@ -308,7 +317,7 @@ export const CollectionPage = () => {
       ))}
 
       <CategoryIndicator>
-        {TypeIcon[currentType as keyof typeof TypeIcon]}
+        {TypeInfo[currentType].icon}
         <span>
           {currentIndex + 1} / {currentNFTs.length}
         </span>
