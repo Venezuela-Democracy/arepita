@@ -9,10 +9,10 @@ const shine = keyframes`
 
 const rarityGlow = {
   Common: 'rgba(255, 255, 255, 0.5)',
-  Uncommon: 'rgba(0, 255, 0, 0.5)',
-  Rare: 'rgba(0, 123, 255, 0.5)',
-  Epic: 'rgba(163, 53, 238, 0.5)',
-  Legendary: 'rgba(255, 215, 0, 0.5)'
+  Uncommon: '#4CAF50',
+  Rare: '#2196F3',
+  Epic: '#9C27B0',
+  Legendary: '#FFD700'
 };
 
 const MainContainer = styled.div`
@@ -20,13 +20,14 @@ const MainContainer = styled.div`
   overflow-y: auto;
   scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
+  background: var(--tg-theme-bg-color);
 `;
 
 const CardsContainer = styled.div`
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding: 1rem;
+  padding: 0;
   gap: 1rem;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
@@ -41,7 +42,6 @@ const CardsContainer = styled.div`
 const CardWrapper = styled.div`
   flex: 0 0 100%;
   scroll-snap-align: center;
-  padding: 0.5rem;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -49,37 +49,13 @@ const CardWrapper = styled.div`
 
 const CardFrame = styled.div<{ $rarity?: string }>`
   position: relative;
-  border-radius: 24px;
-  padding: 1px;
   flex: 1;
-  background: ${props => {
-    const glow = rarityGlow[props.$rarity as keyof typeof rarityGlow] || rarityGlow.Common;
-    return `linear-gradient(135deg, ${glow}, transparent 50%, ${glow})`;
-  }};
+  background: var(--tg-theme-bg-color);
   
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 24px;
-    padding: 2px;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.1),
-      rgba(255, 255, 255, 0.05) 50%,
-      rgba(255, 255, 255, 0.1)
-    );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-  }
-
   &::after {
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: 24px;
     background: ${props => {
       const glow = rarityGlow[props.$rarity as keyof typeof rarityGlow] || rarityGlow.Common;
       return `linear-gradient(
@@ -99,114 +75,101 @@ const CardFrame = styled.div<{ $rarity?: string }>`
     };
     animation: ${shine} 3s infinite linear;
     pointer-events: none;
+    z-index: 1;
   }
 `;
 
 const CardInner = styled.div`
-  background: linear-gradient(
-    145deg,
-    var(--tg-theme-secondary-bg-color),
-    var(--tg-theme-bg-color)
-  );
-  border-radius: 24px;
-  overflow: hidden;
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 2;
 `;
 
 const NFTImage = styled.div<{ $url?: string }>`
-  height: 40%;
-  min-height: 200px;
+  height: 45vh;
   background: ${props => props.$url ? `url(${props.$url})` : 'var(--tg-theme-hint-color)'};
   background-size: cover;
   background-position: center;
   position: relative;
 `;
 
-const RarityBadge = styled.div<{ $rarity: string }>`
+const Badge = styled.div`
   position: absolute;
-  top: 1rem;
-  right: 1rem;
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 600;
-  background: ${props => {
-    const glow = rarityGlow[props.$rarity as keyof typeof rarityGlow];
-    return `linear-gradient(135deg, ${glow}, rgba(0, 0, 0, 0.5))`;
-  }};
-  color: white;
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
+`;
+
+const RarityBadge = styled(Badge)<{ $rarity: string }>`
+  top: 1rem;
+  right: 1rem;
+  color: ${props => rarityGlow[props.$rarity as keyof typeof rarityGlow] || '#fff'};
+`;
+
+const CountBadge = styled(Badge)`
+  top: 1rem;
+  left: 1rem;
+  color: white;
+`;
+
+const IPBadge = styled(Badge)`
+  bottom: 1rem;
+  right: 1rem;
+  color: white;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-`;
-
-const CountBadge = styled.div`
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  backdrop-filter: blur(4px);
 `;
 
 const CardContent = styled.div`
   padding: 1.5rem;
   flex: 1;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  background: var(--tg-theme-bg-color);
 
   &::-webkit-scrollbar {
-    width: 8px;
+    width: 4px;
   }
 
   &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
+    background: transparent;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--tg-theme-hint-color);
     border-radius: 4px;
   }
 `;
 
 const Title = styled.h2`
-  font-size: 1.75rem;
-  font-weight: 700;
-  background: linear-gradient(45deg, #fff, #f0f0f0);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--tg-theme-text-color);
+  margin-bottom: 1rem;
 `;
 
 const Description = styled.p`
   color: var(--tg-theme-hint-color);
-  font-size: 1rem;
-  line-height: 1.6;
-  white-space: pre-line;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
 `;
 
-const TraitsList = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 1rem;
-`;
-
-const TraitItem = styled.div`
-  background: rgba(var(--tg-theme-secondary-bg-color-rgb), 0.5);
-  padding: 1rem;
-  border-radius: 12px;
-  backdrop-filter: blur(4px);
+const ExpandButton = styled.button`
+  color: var(--tg-theme-link-color);
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 0.5rem;
+  font: inherit;
+  cursor: pointer;
+  outline: inherit;
+  text-decoration: underline;
 `;
 
 const CategoryIndicator = styled.div`
@@ -214,14 +177,15 @@ const CategoryIndicator = styled.div`
   bottom: 1rem;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(var(--tg-theme-bg-color-rgb), 0.8);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(8px);
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-size: 0.875rem;
-  color: var(--tg-theme-hint-color);
+  color: white;
   z-index: 10;
   display: flex;
+  align-items: center;
   gap: 0.5rem;
 `;
 
@@ -242,7 +206,14 @@ export const CollectionPage = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
-  const [showFullDescription, setShowFullDescription] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState<Record<string, boolean>>({});
+
+  const toggleDescription = (id: string) => {
+    setShowFullDescription(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -261,18 +232,6 @@ export const CollectionPage = () => {
     return () => container.removeEventListener('scroll', handleScroll);
   }, [currentIndex, setCurrentIndex]);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const cardWidth = container.offsetWidth;
-    container.scrollTo({
-      left: currentIndex * cardWidth,
-      behavior: 'smooth'
-    });
-  }, [currentIndex]);
-
-  // Manejo del scroll vertical para cambiar de tipo
   useEffect(() => {
     const container = mainContainerRef.current;
     if (!container) return;
@@ -305,49 +264,40 @@ export const CollectionPage = () => {
               t => t.name === 'rarity'
             )?.value || 'Common';
 
+            const influencePoints = nft.instances[0]?.traits.traits.find(
+              t => t.name === 'influence_generation'
+            )?.value || '1';
+
             return (
               <CardWrapper key={nft.metadataId}>
                 <CardFrame $rarity={rarity}>
                   <CardInner>
                     <NFTImage $url={nft.display.thumbnail?.url}>
                       <RarityBadge $rarity={rarity}>
-                        <span>{rarity}</span>
+                        {rarity}
                       </RarityBadge>
                       <CountBadge>
                         {nft.count} {nft.count > 1 ? 'copias' : 'copia'}
                       </CountBadge>
+                      <IPBadge>
+                        <span>⚡</span> IP: {influencePoints}
+                      </IPBadge>
                     </NFTImage>
                     
                     <CardContent>
-                      <div>
-                        <Title>{nft.display.name}</Title>
-                        <Description>
-                          {showFullDescription 
-                            ? nft.display.description 
-                            : `${nft.display.description?.slice(0, 150)}...`}
-                          <button 
-                            onClick={() => setShowFullDescription(!showFullDescription)}
-                            className="text-tg-link-color ml-2"
+                      <Title>{nft.display.name}</Title>
+                      <Description>
+                        {showFullDescription[nft.metadataId] 
+                          ? nft.display.description 
+                          : nft.display.description?.slice(0, 150)}
+                        {nft.display.description?.length && nft.display.description?.length > 150 && (
+                          <ExpandButton
+                            onClick={() => toggleDescription(nft.metadataId)}
                           >
-                            {showFullDescription ? 'Ver menos' : 'Ver más'}
-                          </button>
-                        </Description>
-                      </div>
-
-                      <TraitsList>
-                        {nft.instances[0]?.traits.traits
-                          .filter(trait => !['nftUUID', 'cardMetadataID', 'setId'].includes(trait.name))
-                          .map(trait => (
-                            <TraitItem key={trait.name}>
-                              <div className="text-xs text-tg-hint-color uppercase">
-                                {trait.name.replace(/_/g, ' ')}
-                              </div>
-                              <div className="font-medium text-tg-text-color">
-                                {trait.value}
-                              </div>
-                            </TraitItem>
-                          ))}
-                      </TraitsList>
+                            {showFullDescription[nft.metadataId] ? 'Ver menos' : '... Ver más'}
+                          </ExpandButton>
+                        )}
+                      </Description>
                     </CardContent>
                   </CardInner>
                 </CardFrame>
