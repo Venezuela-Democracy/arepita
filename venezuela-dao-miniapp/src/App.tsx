@@ -4,7 +4,7 @@ import { TelegramProvider } from './providers/TelegramProvider';
 import { Layout } from './components/layout/Layout';
 import { Home } from './pages/Home';
 import { Packs } from './pages/Packs';
-import { Collection } from './pages/Collection';
+import Collection from './pages/Collection';
 import { Market } from './pages/Market';
 
 const queryClient = new QueryClient();

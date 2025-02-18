@@ -8,7 +8,9 @@ import {
   Pack,
   BuyPackRequest,
   CreateListingRequest,
-  RevealPacksRequest
+  RevealPacksRequest,
+  NFTCollection,
+  NFTGroup
 } from './types';
 
 
@@ -92,10 +94,14 @@ export const apiService = {
 
   getBalance: async (address: string): Promise<ApiResponse<{ balance: number }>> => {
     try {
-      await apiService.sendLog('Fetching balance for address:', { address });
       const { data } = await api.get(`/wallet/${address}/balance`);
-      await apiService.sendLog('Balance response:', data);
-      return data;
+      console.log('💰 Balance retrieved successfully:', data);
+      return {
+        ...data,
+        data: {
+          balance: parseFloat(data.data.balance) // Convierte el string "35.00095053" a number 35.00095053
+        }
+      };
     } catch (error) {
       await apiService.sendLog('Error getting balance:', error, 'error');
       return {
@@ -193,6 +199,45 @@ export const apiService = {
       return {
         success: false,
         error: 'Error al crear listing'
+      };
+    }
+  },
+
+  getNFTCollection: async (address: string): Promise<ApiResponse<NFTCollection>> => {
+    try {
+      const { data } = await api.get(`/wallet/${address}/nfts`);
+      console.log('🎨 Collection retrieved successfully:', data);
+      return {
+        success: true,
+        // Aquí retornamos directamente data.data en lugar de todo el objeto data
+        data: data.data
+      };
+    } catch (error) {
+      console.error('Error getting collection:', error);
+      return {
+        success: false,
+        error: 'Error al obtener la colección'
+      };
+    }
+  },
+
+  getNFTsByType: async (
+    address: string, 
+    type: 'locations' | 'characters' | 'items',
+    index: number
+  ): Promise<ApiResponse<NFTGroup>> => {
+    try {
+      const { data } = await api.get(`/wallet/${address}/nfts/${type}/${index}`);
+      //console.log('🎨 NFTs by type retrieved successfully:', data);
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error getting NFTs by type:', error);
+      return {
+        success: false,
+        error: 'Error al obtener los NFTs por tipo'
       };
     }
   }

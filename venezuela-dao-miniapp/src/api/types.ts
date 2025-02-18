@@ -56,3 +56,40 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
+
+export interface NFTTrait {
+  name: string;
+  value: string;
+}
+
+export interface NFTInstance {
+  id: string;
+  serial: {
+    number: number;
+  };
+  traits: {
+    traits: NFTTrait[];
+  };
+}
+
+export interface NFTDisplay {
+  name: string;
+  description?: string;
+  thumbnail?: {
+    url: string;
+  };
+}
+
+export interface NFTGroup {
+  metadataId: string;
+  display: NFTDisplay;
+  type: any; // Mantenemos any por la compleja estructura
+  instances: NFTInstance[];
+  count: number; // Total de NFTs en este grupo
+}
+
+export interface NFTCollection {
+  locations: NFTGroup[];  // Array de grupos de locations
+  characters: NFTGroup[]; // Array de grupos de characters
+  culturalItems: NFTGroup[]; // Array de grupos de items
+}

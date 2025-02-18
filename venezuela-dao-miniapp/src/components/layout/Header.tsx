@@ -34,10 +34,16 @@ const WalletInfo = styled.div`
   flex-direction: column;
 `;
 
-const Balance = styled.span`
+interface BalanceProps {
+  loading?: boolean;
+}
+
+const Balance = styled.span<BalanceProps>`
   font-size: 16px;
   font-weight: 600;
   color: var(--tg-theme-text-color);
+  opacity: ${props => props.loading ? 0.5 : 1};
+  transition: opacity 0.2s ease;
 `;
 
 const Address = styled.div`
@@ -47,7 +53,7 @@ const Address = styled.div`
 `;
 
 export const Header = () => {
-  const { user, balance, hasWallet } = useUser();
+  const { user, balance, hasWallet, isLoadingBalance } = useUser();
   const [showCopied, setShowCopied] = useState(false);
 
   const copyAddress = async () => {
@@ -67,7 +73,9 @@ export const Header = () => {
         <Avatar src={user?.avatarUrl} alt="User avatar" />
         {hasWallet ? (
           <WalletInfo>
-            <Balance>{balance.toFixed(2)} FLOW</Balance>
+            <Balance loading={isLoadingBalance}>
+              {balance.toFixed(2)} FLOW
+            </Balance>
             <Address onClick={copyAddress}>
               {user?.address ? formatAddress(user.address) : 'No wallet'}
               <AnimatePresence>

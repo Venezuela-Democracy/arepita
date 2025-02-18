@@ -194,5 +194,86 @@ export const walletRoutes = () => {
     }
   });
 
+  // Obtener NFTs por tipo e índice
+router.get('/:address/nfts/:type/:index', async (req, res) => {
+    try {
+      const { address, type, index } = req.params;
+      const collection = await flowWallet.getNFTCollection(address);
+      
+      let nfts;
+      switch (type) {
+        case 'locations':
+          nfts = collection.locations;
+          break;
+        case 'characters':
+          nfts = collection.characters;
+          break;
+        case 'items':
+          nfts = collection.culturalItems;
+          break;
+        default:
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid NFT type'
+          });
+      }
+  
+      const nftIndex = parseInt(index);
+      if (nftIndex >= nfts.length) {
+        return res.status(404).json({
+          success: false,
+          error: 'NFT not found'
+        });
+      }
+  
+      return res.json({
+        success: true,
+        data: nfts[nftIndex]
+      });
+    } catch (error) {
+      console.error('Error getting NFT:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Error getting NFT'
+      });
+    }
+  });
+
+  router.get('/:address/nfts/:type/count', async (req, res) => {
+    try {
+      const { address, type } = req.params;
+      const collection = await flowWallet.getNFTCollection(address);
+      
+      let count;
+      switch (type) {
+        case 'locations':
+          count = collection.locations.length;
+          break;
+        case 'characters':
+          count = collection.characters.length;
+          break;
+        case 'items':
+          count = collection.culturalItems.length;
+          break;
+        default:
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid NFT type'
+          });
+      }
+  
+      return res.json({
+        success: true,
+        data: { count }
+      });
+    } catch (error) {
+      console.error('Error getting NFT count:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Error getting NFT count'
+      });
+    }
+  });
+
   return router;
 };
