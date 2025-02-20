@@ -3,7 +3,7 @@ import { flowConfig } from '../config';
 import { flowAuth } from '../utils/auth';
 
 export class FlowNFT {
-  private NFT_CONTRACT_NAME = "VenezuelaNFT_19";
+  private NFT_CONTRACT_NAME = "VenezuelaNFT_20";
 
   async buyPack(userAddress: string, privateKey: string, amount: number = 1): Promise<string> {
     try {
