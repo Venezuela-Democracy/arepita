@@ -101,7 +101,7 @@ export const registerActionHandler = (groupManager: TelegramGroupManager) => asy
       { parse_mode: 'Markdown' }
     );
 
-    const wallet = await flowWallet.createWallet();
+    const wallet = await flowWallet.account.createWallet();
     
     // Crear usuario con el idioma ya seleccionado
     await UserService.createUser({

@@ -77,7 +77,7 @@ export async function revealActionHandler(ctx: BotContext & { match: RegExpExecA
     );
 
     const wallet = new FlowWallet();
-    const revealTxId = await wallet.revealPacks(
+    const revealTxId = await wallet.nft.revealPacks(
       authData.address,
       authData.privateKey,
       amount
@@ -96,7 +96,7 @@ export async function revealActionHandler(ctx: BotContext & { match: RegExpExecA
 
     for (const event of revealEvents) {
       const cardID = event.data.cardID;
-      const { cardType, metadata } = await wallet.getNFTMetadata(cardID);
+      const { cardType, metadata } = await wallet.nft.getNFTMetadata(cardID);
       const message = formatNFTRevealMessage(metadata, cardType, userLanguage);
       await ctx.reply(message, { parse_mode: 'Markdown' });
     }

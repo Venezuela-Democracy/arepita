@@ -80,7 +80,7 @@ export async function buyPackActionHandler(ctx: BotContext) {
 
     // Comprar los packs
     const wallet = new FlowWallet();
-    const buyTxId = await wallet.buyPack(
+    const buyTxId = await wallet.nft.buyPack(
       authData.address,
       authData.privateKey,
       amount

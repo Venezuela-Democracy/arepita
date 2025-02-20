@@ -191,7 +191,7 @@ export const sellHandler = async (ctx: BotContext) => {
       return;
     }
 
-    const collection = await flowWallet.getNFTCollection(address);
+    const collection = await flowWallet.nft.getNFTCollection(address);
     
     await ctx.reply(
       MESSAGES[userLanguage].SELL_NFT_TITLE + '\n\n' + 
@@ -240,7 +240,7 @@ export const sellActionHandler = async (ctx: BotContext) => {
 
     // Manejar la acción principal del menú
     if (action === 'main') {
-      const collection = await flowWallet.getNFTCollection(address);
+      const collection = await flowWallet.nft.getNFTCollection(address);
       await ctx.editMessageText(
         MESSAGES[userLanguage].SELL_NFT_TITLE + '\n\n' + 
         MESSAGES[userLanguage].SELL_NFT_SELECT,
@@ -259,7 +259,7 @@ export const sellActionHandler = async (ctx: BotContext) => {
 
     // Manejar la configuración de precio
     if (action === 'setprice') {
-      const collection = await flowWallet.getNFTCollection(address);
+      const collection = await flowWallet.nft.getNFTCollection(address);
       const nfts = type === 'locations' ? collection.locations :
                    type === 'characters' ? collection.characters :
                    collection.culturalItems;
@@ -283,7 +283,7 @@ export const sellActionHandler = async (ctx: BotContext) => {
     }
 
     // Manejar la navegación y visualización de NFTs
-    const collection = await flowWallet.getNFTCollection(address);
+    const collection = await flowWallet.nft.getNFTCollection(address);
     const nfts = action === 'locations' ? collection.locations :
                  action === 'characters' ? collection.characters :
                  collection.culturalItems;
@@ -357,7 +357,7 @@ export const handlePrice = async (ctx: BotContext) => {
     }
 
     // Crear el listing
-    await flowWallet.createListing(
+    await flowWallet.storefront.createListing(
       address,
       privateKey,
       ctx.session.selectedNFTId as number,

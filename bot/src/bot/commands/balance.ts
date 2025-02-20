@@ -23,7 +23,7 @@ export const balanceHandler = async (ctx: BotContext) => {
       return;
     }
 
-    const balance = await flowWallet.getBalance(address);
+    const balance = await flowWallet.account.getBalance(address);
     
     // Usar el mensaje de balance en el idioma correspondiente
     const message = MESSAGES[userLanguage].BALANCE_MESSAGE

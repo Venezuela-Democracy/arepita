@@ -223,7 +223,7 @@ export const collectionHandler = async (ctx: BotContext) => {
       return;
     }
 
-    const collection = await flowWallet.getNFTCollection(address);
+    const collection = await flowWallet.nft.getNFTCollection(address);
     
     const labels = {
       es: {
@@ -301,7 +301,7 @@ export const collectionActionHandler = async (ctx: BotContext) => {
     }
 
     console.log('Obteniendo colección para address:', address);
-    const collection = await flowWallet.getNFTCollection(address);
+    const collection = await flowWallet.nft.getNFTCollection(address);
 
     if (type === 'main') {
       const labels = {

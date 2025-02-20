@@ -8,7 +8,7 @@ export const walletRoutes = () => {
   // Crear nueva wallet
   router.post('/create', async (req, res) => {
     try {
-      const wallet = await flowWallet.createWallet();
+      const wallet = await flowWallet.account.createWallet();
       return res.json({
         success: true,
         data: wallet
@@ -27,7 +27,7 @@ export const walletRoutes = () => {
     try {
       const { address } = req.params;
       console.log('💰 Getting balance for address:', address);
-      const balance = await flowWallet.getBalance(address);
+      const balance = await flowWallet.account.getBalance(address);
       console.log('✅ Balance retrieved successfully:', balance);
       return res.json({
         success: true,
@@ -47,7 +47,7 @@ export const walletRoutes = () => {
   router.get('/:address/nfts', async (req, res) => {
     try {
       const { address } = req.params;
-      const nfts = await flowWallet.getNFTCollection(address);
+      const nfts = await flowWallet.nft.getNFTCollection(address);
       return res.json({
         success: true,
         data: nfts
@@ -74,7 +74,7 @@ export const walletRoutes = () => {
         });
       }
 
-      const txId = await flowWallet.buyPack(address, privateKey, amount);
+      const txId = await flowWallet.nft.buyPack(address, privateKey, amount);
       return res.json({
         success: true,
         data: { transactionId: txId }
@@ -101,7 +101,7 @@ export const walletRoutes = () => {
         });
       }
 
-      const txId = await flowWallet.revealPacks(address, privateKey, amount);
+      const txId = await flowWallet.nft.revealPacks(address, privateKey, amount);
       return res.json({
         success: true,
         data: { transactionId: txId }
@@ -119,7 +119,7 @@ export const walletRoutes = () => {
   router.get('/:address/unrevealed-packs', async (req, res) => {
     try {
       const { address } = req.params;
-      const packs = await flowWallet.getUnrevealedPacks(address);
+      const packs = await flowWallet.nft.getUnrevealedPacks(address);
       return res.json({
         success: true,
         data: { unrevealedPacks: packs }
@@ -146,7 +146,7 @@ export const walletRoutes = () => {
         });
       }
 
-      const txId = await flowWallet.setupStorefront(address, privateKey);
+      const txId = await flowWallet.storefront.setupStorefront(address, privateKey);
       return res.json({
         success: true,
         data: { transactionId: txId }
@@ -173,7 +173,7 @@ export const walletRoutes = () => {
         });
       }
 
-      const txId = await flowWallet.createListing(
+      const txId = await flowWallet.storefront.createListing(
         address,
         privateKey,
         nftId,
@@ -198,7 +198,7 @@ export const walletRoutes = () => {
 router.get('/:address/nfts/:type/:index', async (req, res) => {
     try {
       const { address, type, index } = req.params;
-      const collection = await flowWallet.getNFTCollection(address);
+      const collection = await flowWallet.nft.getNFTCollection(address);
       
       let nfts;
       switch (type) {
@@ -242,7 +242,7 @@ router.get('/:address/nfts/:type/:index', async (req, res) => {
   router.get('/:address/nfts/:type/count', async (req, res) => {
     try {
       const { address, type } = req.params;
-      const collection = await flowWallet.getNFTCollection(address);
+      const collection = await flowWallet.nft.getNFTCollection(address);
       
       let count;
       switch (type) {
