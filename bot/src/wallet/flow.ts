@@ -2,20 +2,32 @@ import * as fcl from "@onflow/fcl";
 import { ec as EC } from "elliptic";
 import { SHA3 } from "sha3";
 import { flowConfig } from './config';
-import { WalletResponse} from "./types";
+import { WalletResponse } from "./types";
 import { CREATE_LISTING_TRANSACTION, PURCHASE_LISTING_TRANSACTION, SETUP_STOREFRONT_TRANSACTION } from "./transactions";
 
 export class FlowWallet {
-  private ec: EC;
-  private serviceAccount: typeof flowConfig.serviceAccount;
+  // -------------------------
+  // Private Constants
+  // -------------------------
   private INITIAL_FUNDING = "50.0";
   private NFT_CONTRACT_NAME = "VenezuelaNFT_19";
+
+  // -------------------------
+  // Private Variables
+  // -------------------------
+  private ec: EC;
+  private serviceAccount: typeof flowConfig.serviceAccount;
 
   constructor() {
     this.ec = new EC('p256');
     this.serviceAccount = flowConfig.serviceAccount;
   }
 
+  // -------------------------
+  // Private Helper Methods
+  // -------------------------
+
+  // Signs a message with the provided private key using SHA3 and elliptic curve.
   private signWithKey(privateKey: string, message: string): string {
     const hash = new SHA3(256);
     hash.update(Buffer.from(message, 'hex'));
@@ -29,6 +41,7 @@ export class FlowWallet {
     return Buffer.concat([r, s]).toString('hex');
   }
 
+  // Returns an authorization function for Flow transactions. Uses provided authData or falls back to service account.
   private async getAuthorization(authData?: { address: string; privateKey: string; keyIndex?: number }) {
     return async (account: any) => {
       const address = authData?.address || this.serviceAccount.address;
@@ -54,6 +67,30 @@ export class FlowWallet {
     };
   }
 
+  // A generic helper to execute a transaction with given cadence, args, and optional auth options.
+  private async executeTransaction(params: {
+    cadence: string,
+    argsFn?: (arg: any, t: any) => any[],
+    authOptions?: { address: string; privateKey: string; keyIndex?: number },
+    limit?: number
+  }): Promise<string> {
+    const { cadence, argsFn, authOptions, limit = 1000 } = params;
+    const authorization = await this.getAuthorization(authOptions);
+    return await fcl.mutate({
+      cadence,
+      args: argsFn,
+      payer: authorization,
+      proposer: authorization,
+      authorizations: [authorization],
+      limit: limit
+    });
+  }
+
+  // -------------------------
+  // Account Operations
+  // -------------------------
+
+  // Verifies that the service account is correctly configured.
   async verifyServiceAccount(): Promise<boolean> {
     try {
       const account = await fcl.account(this.serviceAccount.address);
@@ -69,13 +106,13 @@ export class FlowWallet {
     }
   }
 
-
+  // Creates a new wallet and corresponding Flow account.
   async createWallet(): Promise<WalletResponse> {
     try {
       const keyPair = this.ec.genKeyPair();
       const privateKey = keyPair.getPrivate('hex');
       
-      // Formatear la clave pública correctamente
+      // Format the public key correctly
       const publicKeyPoint = keyPair.getPublic();
       const publicKey = Buffer.concat([
         publicKeyPoint.getX().toArrayLike(Buffer, 'be', 32),
@@ -90,8 +127,7 @@ export class FlowWallet {
   
       const authorization = await this.getAuthorization();
 
-      const transactionId = await fcl.mutate({
-        cadence: `
+      const cadence = `
           transaction(publicKey: String) {
             prepare(signer: auth(BorrowValue) &Account) {
               let account = Account(payer: signer)
@@ -111,10 +147,11 @@ export class FlowWallet {
               log(account.address)
             }
           }
-        `,
-        args: (arg: any, t: any) => [
-          arg(publicKey, t.String)
-        ],
+        `;
+  
+      const transactionId = await fcl.mutate({
+        cadence,
+        args: (arg: any, t: any) => [ arg(publicKey, t.String) ],
         payer: authorization,
         proposer: authorization,
         authorizations: [authorization],
@@ -123,11 +160,10 @@ export class FlowWallet {
   
       console.log('📝 Transaction ID:', transactionId);
   
-      // Esperar a que la transacción se complete
+      // Wait for the transaction to be sealed and process the result
       const txResult = await fcl.tx(transactionId).onceSealed();
       console.log('🔍 Transaction Result:', JSON.stringify(txResult, null, 2));
       
-      // Buscar el evento de creación de cuenta
       const events = txResult.events;
       console.log('📊 Events:', JSON.stringify(events, null, 2));
   
@@ -145,7 +181,7 @@ export class FlowWallet {
       const newAddress = accountCreatedEvent.data.address;
       console.log('📫 New Address:', newAddress);
   
-      // Fondear la cuenta en testnet
+      // Fund the account in testnet
       if (process.env.FLOW_NETWORK === 'testnet') {
         try {
           const txId = await this.fundWallet(newAddress, this.INITIAL_FUNDING);
@@ -171,10 +207,10 @@ export class FlowWallet {
     }
   }
 
+  // Queries the balance of a Flow account.
   async getBalance(address: string): Promise<string> {
     try {
-      const balance = await fcl.query({
-        cadence: `
+      const cadence = `
           import FungibleToken from ${flowConfig.fungibleToken}
           import FlowToken from ${flowConfig.flowToken}
   
@@ -191,8 +227,11 @@ export class FlowWallet {
   
             return vaultRef.balance
           }
-        `,
-        args: (arg: any, t: any) => [arg(address, t.Address)]
+        `;
+  
+      const balance = await fcl.query({
+        cadence,
+        args: (arg: any, t: any) => [ arg(address, t.Address) ]
       });
   
       return balance;
@@ -202,14 +241,14 @@ export class FlowWallet {
     }
   }
 
+  // Funds a Flow account with a specified amount.
   async fundWallet(toAddress: string, amount: string): Promise<string> {
     try {
       console.log(`💰 Fondeando wallet ${toAddress} con ${amount} FLOW...`);
       
       const authorization = await this.getAuthorization();
       
-      const transactionId = await fcl.mutate({
-        cadence: `
+      const cadence = `
           import FungibleToken from 0x9a0766d93b6608b7
           import FlowToken from 0x7e60df042a9c0868
   
@@ -227,7 +266,6 @@ export class FlowWallet {
               // Get the recipient's public account object
               let recipient = getAccount(recipient)
               
-              // Get their public receiver reference
               let receiverRef = recipient.capabilities
                 .borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
                 ?? panic("Could not borrow receiver reference")
@@ -238,7 +276,10 @@ export class FlowWallet {
               log("Transfer succeeded!")
             }
           }
-        `,
+        `;
+  
+      const transactionId = await fcl.mutate({
+        cadence,
         args: (arg: any, t: any) => [
           arg(amount, t.UFix64),
           arg(toAddress, t.Address)
@@ -251,7 +292,6 @@ export class FlowWallet {
   
       console.log(`✅ Transacción de fondeo iniciada: ${transactionId}`);
       
-      // Esperar a que la transacción se complete
       const txResult = await fcl.tx(transactionId).onceSealed();
       console.log('🔍 Resultado de la transacción:', txResult);
       
@@ -262,6 +302,11 @@ export class FlowWallet {
     }
   }
 
+  // -------------------------
+  // NFT Operations
+  // -------------------------
+
+  // Buys NFT packs for a user.
   async buyPack(userAddress: string, privateKey: string, amount: number = 1): Promise<string> {
     try {
       const authorization = await this.getAuthorization({ 
@@ -269,8 +314,7 @@ export class FlowWallet {
         privateKey: privateKey 
       });
   
-      const transactionId = await fcl.mutate({
-        cadence: `
+      const cadence = `
           import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
           import NonFungibleToken from ${flowConfig.nonFungibleToken}
           import MetadataViews from ${flowConfig.metadataViews}
@@ -311,7 +355,10 @@ export class FlowWallet {
               }
             }
           }
-        `,
+        `;
+  
+      const transactionId = await fcl.mutate({
+        cadence,
         args: (arg: any, t: any) => [
           arg(0, t.UInt32),
           arg(amount, t.Int)
@@ -329,6 +376,7 @@ export class FlowWallet {
     }
   }
   
+  // Reveals an owned NFT pack.
   async revealPack(userAddress: string, privateKey: string): Promise<string> {
     try {
       const authorization = await this.getAuthorization({
@@ -336,22 +384,18 @@ export class FlowWallet {
         privateKey: privateKey
       });
   
-      const transactionId = await fcl.mutate({
-        cadence: `
+      const cadence = `
           import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
           import NonFungibleToken from ${flowConfig.nonFungibleToken}
           import MetadataViews from ${flowConfig.metadataViews}
   
           transaction {
             prepare(signer: auth(BorrowValue, LoadValue) &Account) {
-              // get ref to ReceiptStorage
               let storageRef = signer.storage.borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(from: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
                   ?? panic("Cannot borrow a reference to the recipient's VenezuelaNFT ReceiptStorage")
               
-              // Load receipt from storage
               let receipt <- storageRef.withdraw()
   
-              // Reveal by redeeming receipt
               ${this.NFT_CONTRACT_NAME}.revealPack(
                 receipt: <-receipt, 
                 minter: signer.address,
@@ -359,7 +403,10 @@ export class FlowWallet {
               )
             }
           }
-        `,
+        `;
+  
+      const transactionId = await fcl.mutate({
+        cadence,
         payer: authorization,
         proposer: authorization,
         authorizations: [authorization],
@@ -372,41 +419,35 @@ export class FlowWallet {
       throw new Error('Failed to reveal pack');
     }
   }
-
+  
+  // Retrieves metadata for an NFT based on its card ID.
   async getNFTMetadata(cardID: number): Promise<any> {
     try {
       console.log("Obteniendo tipo para Card ID:", cardID);
       
-      // Primero obtenemos el tipo específico de esta carta
       const cardType = await fcl.query({
         cadence: `
-          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-          
-          access(all) fun main(cardID: UInt32): Type {
-            return ${this.NFT_CONTRACT_NAME}.getCardType(cardID: cardID)
-          }
-        `,
-        args: (arg: any, t: any) => [
-          arg(cardID, t.UInt32)
-        ]
+            import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
+            
+            access(all) fun main(cardID: UInt32): Type {
+              return ${this.NFT_CONTRACT_NAME}.getCardType(cardID: cardID)
+            }
+          `,
+        args: (arg: any, t: any) => [ arg(cardID, t.UInt32) ]
       });
   
       console.log("Tipo de carta:", cardType.typeID);
   
-      // Según el tipo, obtenemos la metadata específica
       const metadata = await fcl.query({
         cadence: `
-          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-          
-          access(all) fun main(cardID: UInt32): AnyStruct {
-            return ${this.NFT_CONTRACT_NAME}.getCardMetadata(cardID: cardID, cardType: ${this.NFT_CONTRACT_NAME}.getCardType(cardID: cardID))
-          }
-        `,
-        args: (arg: any, t: any) => [
-          arg(cardID, t.UInt32)
-        ]
+            import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
+            
+            access(all) fun main(cardID: UInt32): AnyStruct {
+              return ${this.NFT_CONTRACT_NAME}.getCardMetadata(cardID: cardID, cardType: ${this.NFT_CONTRACT_NAME}.getCardType(cardID: cardID))
+            }
+          `,
+        args: (arg: any, t: any) => [ arg(cardID, t.UInt32) ]
       });
-      //console.log("Metadata:", metadata);
       return {
         cardType: cardType.typeID,
         metadata: metadata
@@ -417,279 +458,187 @@ export class FlowWallet {
       throw new Error('Failed to get NFT metadata');
     }
   }
-
+  
+  // Fetches the NFT IDs associated with an account.
   async getNFTIds(address: string): Promise<number[]> {
     try {
-        const ids = await fcl.query({
-            cadence: `
-                import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-
-                access(all) fun main(account: Address): [UInt64] {
-                    let account = getAccount(account)
-                    
-                    let cap = account.capabilities
-                        .borrow<&${this.NFT_CONTRACT_NAME}.Collection>(${this.NFT_CONTRACT_NAME}.CollectionPublicPath)
-                        ?? panic("Could not borrow collection capability")
-
-                    return cap.getIDs()
-                }
-            `,
-            args: (arg: any, t: any) => [arg(address, t.Address)]
-        });
-
-        console.log("NFT IDs encontrados:", ids);
-        return ids;
+      const ids = await fcl.query({
+        cadence: `
+                  import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
+  
+                  access(all) fun main(account: Address): [UInt64] {
+                      let account = getAccount(account)
+                      
+                      let cap = account.capabilities
+                          .borrow<&${this.NFT_CONTRACT_NAME}.Collection>(${this.NFT_CONTRACT_NAME}.CollectionPublicPath)
+                          ?? panic("Could not borrow collection capability")
+  
+                      return cap.getIDs()
+                  }
+              `,
+        args: (arg: any, t: any) => [ arg(address, t.Address) ]
+      });
+  
+      console.log("NFT IDs encontrados:", ids);
+      return ids;
     } catch (error) {
-        console.error('Error getting NFT IDs:', error);
-        throw new Error('Failed to get NFT IDs');
+      console.error('Error getting NFT IDs:', error);
+      throw new Error('Failed to get NFT IDs');
     }
-}
-
-async getCardType(cardID: number): Promise<any> {
-  try {
+  }
+  
+  // Retrieves the card type for a given NFT card ID.
+  async getCardType(cardID: number): Promise<any> {
+    try {
       console.log("Intentando obtener tipo para Card ID:", cardID);
       
       const cardType = await fcl.query({
-          cadence: `
-              import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-              
-              access(all) fun main(cardID: UInt32): Type {
-                  return ${this.NFT_CONTRACT_NAME}.getCardType(cardID: cardID)
-              }
-          `,
-          args: (arg: any, t: any) => [
-              arg(cardID, t.UInt32)
-          ]
+        cadence: `
+                  import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
+                  
+                  access(all) fun main(cardID: UInt32): Type {
+                      return ${this.NFT_CONTRACT_NAME}.getCardType(cardID: cardID)
+                  }
+              `,
+        args: (arg: any, t: any) => [ arg(cardID, t.UInt32) ]
       });
-
+  
       console.log(`Card ID ${cardID} tiene tipo:`, cardType);
       return cardType;
-  } catch (error) {
+    } catch (error) {
       console.error(`Error obteniendo tipo para Card ID ${cardID}:`, error);
       return null;
+    }
   }
-}
-
-async getNFTCollection(address: string): Promise<{ 
-  locations: any[], 
-  characters: any[], 
-  culturalItems: any[] 
-}> {
-  try {
+  
+  // Retrieves and classifies the NFT collection from an account.
+  async getNFTCollection(address: string): Promise<{ 
+    locations: any[], 
+    characters: any[], 
+    culturalItems: any[] 
+  }> {
+    try {
       const nfts = await fcl.query({
-          cadence: `
-              import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-              import MetadataViews from ${flowConfig.metadataViews}
-
-              access(all) fun main(account: Address): [AnyStruct]? {
-                  let account = getAccount(account)
-                  let answer: [AnyStruct] = []
-                  var nft: AnyStruct = nil
-
-                  let cap = account.capabilities
-                      .borrow<&${this.NFT_CONTRACT_NAME}.Collection>(${this.NFT_CONTRACT_NAME}.CollectionPublicPath)!
-
-                  let ids = cap.getIDs()
-
-                  for id in ids {
-                      let nftRef = cap.borrowVenezuelaNFT(id: id)!
-                      let resolver = cap.borrowViewResolver(id: id)!
-                      let displayView = MetadataViews.getDisplay(resolver)!
-                      let serialView = MetadataViews.getSerial(resolver)!
-                      let traits = MetadataViews.getTraits(resolver)!
-                      let cardType = ${this.NFT_CONTRACT_NAME}.getCardType(cardID: UInt32(nftRef.cardID))
-
-                      nft = {
-                          "cardMetadataID": nftRef.cardID,
-                          "display": displayView,
-                          "nftID": nftRef.id,
-                          "serial": serialView,
-                          "traits": traits,
-                          "type": cardType
+        cadence: `
+                  import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
+                  import MetadataViews from ${flowConfig.metadataViews}
+  
+                  access(all) fun main(account: Address): [AnyStruct]? {
+                      let account = getAccount(account)
+                      let answer: [AnyStruct] = []
+                      var nft: AnyStruct = nil
+  
+                      let cap = account.capabilities
+                          .borrow<&${this.NFT_CONTRACT_NAME}.Collection>(${this.NFT_CONTRACT_NAME}.CollectionPublicPath)!
+  
+                      let ids = cap.getIDs()
+  
+                      for id in ids {
+                          let nftRef = cap.borrowVenezuelaNFT(id: id)!
+                          let resolver = cap.borrowViewResolver(id: id)!
+                          let displayView = MetadataViews.getDisplay(resolver)!
+                          let serialView = MetadataViews.getSerial(resolver)!
+                          let traits = MetadataViews.getTraits(resolver)!
+                          let cardType = ${this.NFT_CONTRACT_NAME}.getCardType(cardID: UInt32(nftRef.cardID))
+  
+                          nft = {
+                              "cardMetadataID": nftRef.cardID,
+                              "display": displayView,
+                              "nftID": nftRef.id,
+                              "serial": serialView,
+                              "traits": traits,
+                              "type": cardType
+                          }
+                          
+                          answer.append(nft)
                       }
-                      
-                      answer.append(nft)
+                      return answer
                   }
-                  return answer
-              }
-          `,
-          args: (arg: any, t: any) => [arg(address, t.Address)]
+              `,
+        args: (arg: any, t: any) => [ arg(address, t.Address) ]
       });
-
+  
       const groupedNFTs = {
-          locations: [] as any[],
-          characters: [] as any[],
-          culturalItems: [] as any[]
+        locations: [] as any[],
+        characters: [] as any[],
+        culturalItems: [] as any[]
       };
-
+  
       if (!nfts) {
-          console.log('No NFTs found for address:', address);
-          return groupedNFTs;
-      }else{
+        console.log('No NFTs found for address:', address);
+        return groupedNFTs;
+      } else {
         console.log('NFTs found for address:', JSON.stringify(nfts, null, 2));
       }
-
-      // Crear un mapa para agrupar NFTs por cardMetadataID
+  
+      // Group NFTs by metadata ID
       const nftsByMetadataId = new Map();
-
-      // Agrupar NFTs por cardMetadataID
+  
       for (const nft of nfts) {
-          const metadataId = nft.cardMetadataID;
-          if (!nftsByMetadataId.has(metadataId)) {
-              nftsByMetadataId.set(metadataId, {
-                  metadataId,
-                  display: nft.display,
-                  type: nft.type,
-                  instances: [],
-                  count: 0
-              });
-          }
-          
-          const group = nftsByMetadataId.get(metadataId);
-          group.instances.push({
-              nftID: nft.nftID,
-              serial: nft.serial,
-              traits: nft.traits
+        const metadataId = nft.cardMetadataID;
+        if (!nftsByMetadataId.has(metadataId)) {
+          nftsByMetadataId.set(metadataId, {
+            metadataId,
+            display: nft.display,
+            type: nft.type,
+            instances: [],
+            count: 0
           });
-          group.count++;
+        }
+        
+        const group = nftsByMetadataId.get(metadataId);
+        group.instances.push({
+          nftID: nft.nftID,
+          serial: nft.serial,
+          traits: nft.traits
+        });
+        group.count++;
       }
-
-// Clasificar en las categorías correspondientes
-for (const [_, nftGroup] of nftsByMetadataId) {
-  // Obtener el typeID que contiene el tipo completo
-  const typeID = nftGroup.type.typeID;
-  console.log('Procesando NFT:', {
-      name: nftGroup.display.name,
-      typeID: typeID
-  });
   
-  if (!typeID) {
-      console.log('⚠️ NFT sin typeID:', nftGroup);
-      continue;
-  }
-
-  // El typeID tiene el formato "A.826dae42290107c3.VenezuelaNFT_14.LocationCard"
-  // Nos interesa solo la última parte después del último punto
-  const cardType = typeID.split('.').pop() || '';
+      // Classify NFTs into categories
+      for (const [_, nftGroup] of nftsByMetadataId) {
+        const typeID = nftGroup.type.typeID;
+        console.log('Procesando NFT:', {
+          name: nftGroup.display.name,
+          typeID: typeID
+        });
+        
+        if (!typeID) {
+          console.log('⚠️ NFT sin typeID:', nftGroup);
+          continue;
+        }
   
-  if (cardType.includes('LocationCard')) {
-      console.log('→ Agregando location:', nftGroup.display.name);
-      groupedNFTs.locations.push(nftGroup);
-  } else if (cardType.includes('CharacterCard')) {
-      console.log('→ Agregando character:', nftGroup.display.name);
-      groupedNFTs.characters.push(nftGroup);
-  } else if (cardType.includes('CulturalItemCard')) {
-      console.log('→ Agregando cultural item:', nftGroup.display.name);
-      groupedNFTs.culturalItems.push(nftGroup);
-  } else {
-      console.log('⚠️ Tipo no reconocido:', cardType);
-  }
-}
-console.log('Clasificación final:', {
-  locations: groupedNFTs.locations.map(n => n.display.name),
-  characters: groupedNFTs.characters.map(n => n.display.name),
-  culturalItems: groupedNFTs.culturalItems.map(n => n.display.name)
-});
+        const cardType = typeID.split('.').pop() || '';
+        
+        if (cardType.includes('LocationCard')) {
+          console.log('→ Agregando location:', nftGroup.display.name);
+          groupedNFTs.locations.push(nftGroup);
+        } else if (cardType.includes('CharacterCard')) {
+          console.log('→ Agregando character:', nftGroup.display.name);
+          groupedNFTs.characters.push(nftGroup);
+        } else if (cardType.includes('CulturalItemCard')) {
+          console.log('→ Agregando cultural item:', nftGroup.display.name);
+          groupedNFTs.culturalItems.push(nftGroup);
+        } else {
+          console.log('⚠️ Tipo no reconocido:', cardType);
+        }
+      }
+      console.log('Clasificación final:', {
+        locations: groupedNFTs.locations.map(n => n.display.name),
+        characters: groupedNFTs.characters.map(n => n.display.name),
+        culturalItems: groupedNFTs.culturalItems.map(n => n.display.name)
+      });
       return groupedNFTs;
-  } catch (error) {
+    } catch (error) {
       console.error('Error getting NFT collection:', error);
       throw new Error('Failed to get NFT collection');
-  }
-}
-
-  async setupStorefront(address: string, privateKey: string): Promise<string> {
-    try {
-      const authorization = await this.getAuthorization({
-        address: address,
-        privateKey: privateKey
-      });
-
-      const transactionId = await fcl.mutate({
-        cadence: SETUP_STOREFRONT_TRANSACTION,
-        payer: authorization,
-        proposer: authorization,
-        authorizations: [authorization],
-        limit: 1000
-      });
-
-      return transactionId;
-    } catch (error) {
-      console.error('Error setting up storefront:', error);
-      throw new Error('Failed to setup storefront');
     }
   }
-
-  async createListing(
-    address: string, 
-    privateKey: string, 
-    nftId: number, 
-    saleItemPrice: number,
-    marketplacesAddress: string[]
-  ): Promise<string> {
-    try {
-      const authorization = await this.getAuthorization({
-        address: address,
-        privateKey: privateKey
-      });
-
-      const transactionId = await fcl.mutate({
-        cadence: CREATE_LISTING_TRANSACTION,
-        args: (arg: any, t: any) => [
-          arg(nftId, t.UInt64),
-          arg(saleItemPrice.toFixed(8), t.UFix64),
-          arg(null, t.Optional(t.String)),
-          arg("0.0", t.UFix64),
-          arg(marketplacesAddress, t.Array(t.Address))
-        ],
-        payer: authorization,
-        proposer: authorization,
-        authorizations: [authorization],
-        limit: 1000
-      });
-
-      return transactionId;
-    } catch (error) {
-      console.error('Error creating listing:', error);
-      throw new Error('Failed to create listing');
-    }
-  }
-
-  async purchaseListing(
-    buyerAddress: string,
-    buyerPrivateKey: string,
-    listingId: number,
-    sellerAddress: string
-  ): Promise<string> {
-    try {
-      const authorization = await this.getAuthorization({
-        address: buyerAddress,
-        privateKey: buyerPrivateKey
-      });
-
-      const transactionId = await fcl.mutate({
-        cadence: PURCHASE_LISTING_TRANSACTION,
-        args: (arg: any, t: any) => [
-          arg(listingId, t.UInt64),
-          arg(sellerAddress, t.Address),
-          arg(null, t.Optional(t.Address))
-        ],
-        payer: authorization,
-        proposer: authorization,
-        authorizations: [authorization],
-        limit: 1000
-      });
-
-      return transactionId;
-    } catch (error) {
-      console.error('Error purchasing listing:', error);
-      throw new Error('Failed to purchase listing');
-    }
-  }
-
+  
+  // Retrieves the number of unrevealed NFT packs for an account.
   async getUnrevealedPacks(address: string): Promise<number> {
     try {
-      const packs = await fcl.query({
-        cadence: `
+      const cadence = `
           import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
   
           access(all) fun main(account: Address): Int {
@@ -698,8 +647,10 @@ console.log('Clasificación final:', {
               .borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(${this.NFT_CONTRACT_NAME}.ReceiptStoragePublic)!
             return cap.getBalance()
           }
-        `,
-        args: (arg: any, t: any) => [arg(address, t.Address)]
+        `;
+      const packs = await fcl.query({
+        cadence,
+        args: (arg: any, t: any) => [ arg(address, t.Address) ]
       });
   
       return packs;
@@ -709,6 +660,7 @@ console.log('Clasificación final:', {
     }
   }
   
+  // Reveals multiple NFT packs for a user.
   async revealPacks(userAddress: string, privateKey: string, amount: number): Promise<string> {
     try {
       const authorization = await this.getAuthorization({ 
@@ -716,8 +668,7 @@ console.log('Clasificación final:', {
         privateKey: privateKey 
       });
   
-      const transactionId = await fcl.mutate({
-        cadence: `
+      const cadence = `
           import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
   
           transaction(amount: Int) {
@@ -738,8 +689,11 @@ console.log('Clasificación final:', {
               }
             }
           }
-        `,
-        args: (arg: any, t: any) => [arg(amount, t.Int)],
+        `;
+  
+      const transactionId = await fcl.mutate({
+        cadence,
+        args: (arg: any, t: any) => [ arg(amount, t.Int) ],
         payer: authorization,
         proposer: authorization,
         authorizations: [authorization],
@@ -750,6 +704,102 @@ console.log('Clasificación final:', {
     } catch (error) {
       console.error('Error revealing packs:', error);
       throw new Error('Failed to reveal packs');
+    }
+  }
+
+  // -------------------------
+  // Storefront & Listing Operations
+  // -------------------------
+
+  // Sets up the storefront for a given account.
+  async setupStorefront(address: string, privateKey: string): Promise<string> {
+    try {
+      const authorization = await this.getAuthorization({
+        address: address,
+        privateKey: privateKey
+      });
+  
+      const transactionId = await fcl.mutate({
+        cadence: SETUP_STOREFRONT_TRANSACTION,
+        payer: authorization,
+        proposer: authorization,
+        authorizations: [authorization],
+        limit: 1000
+      });
+  
+      return transactionId;
+    } catch (error) {
+      console.error('Error setting up storefront:', error);
+      throw new Error('Failed to setup storefront');
+    }
+  }
+  
+  // Creates a listing for an NFT.
+  async createListing(
+    address: string, 
+    privateKey: string, 
+    nftId: number, 
+    saleItemPrice: number,
+    marketplacesAddress: string[]
+  ): Promise<string> {
+    try {
+      const authorization = await this.getAuthorization({
+        address: address,
+        privateKey: privateKey
+      });
+  
+      const transactionId = await fcl.mutate({
+        cadence: CREATE_LISTING_TRANSACTION,
+        args: (arg: any, t: any) => [
+          arg(nftId, t.UInt64),
+          arg(saleItemPrice.toFixed(8), t.UFix64),
+          arg(null, t.Optional(t.String)),
+          arg("0.0", t.UFix64),
+          arg(marketplacesAddress, t.Array(t.Address))
+        ],
+        payer: authorization,
+        proposer: authorization,
+        authorizations: [authorization],
+        limit: 1000
+      });
+  
+      return transactionId;
+    } catch (error) {
+      console.error('Error creating listing:', error);
+      throw new Error('Failed to create listing');
+    }
+  }
+  
+  // Purchases an NFT listing.
+  async purchaseListing(
+    buyerAddress: string,
+    buyerPrivateKey: string,
+    listingId: number,
+    sellerAddress: string
+  ): Promise<string> {
+    try {
+      const authorization = await this.getAuthorization({
+        address: buyerAddress,
+        privateKey: buyerPrivateKey
+      });
+  
+      const transactionId = await fcl.mutate({
+        cadence: PURCHASE_LISTING_TRANSACTION,
+        args: (arg: any, t: any) => [
+          arg(listingId, t.UInt64),
+          arg(sellerAddress, t.Address),
+          arg(null, t.Optional(t.Address))
+        ],
+        payer: authorization,
+        proposer: authorization,
+        authorizations: [authorization],
+        limit: 1000
+      });
+  
+      return transactionId;
+    } catch (error) {
+      console.error('Error purchasing listing:', error);
+      throw new Error('Failed to purchase listing');
     }
   }
 }
