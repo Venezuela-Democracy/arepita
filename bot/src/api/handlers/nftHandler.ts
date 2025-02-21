@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { flowWallet } from '../../wallet/flow';
 import { UserService } from '../../services';
+import * as fcl from '@onflow/fcl';
 
 
 export const nftHandler = {
@@ -38,8 +39,12 @@ export const nftHandler = {
 
       console.log('⚡ Ejecutando transacción...');
       const transactionId = await flowWallet.nft.buyPack(address, privateKey, amount);
-      console.log('✅ Transacción exitosa ID:', transactionId);
+      
+      // Esperar a que la transacción se selle
+      const txResult = await fcl.tx(transactionId).onceSealed();
 
+      console.log('✅ Transacción exitosa ID:', transactionId);
+      console.log('🔍 Resultado de la transacción:', txResult);
       return res.json({ success: true, data: { transactionId } });
     } catch (error) {
       console.error('💥 Error en buyPacks:', error);
@@ -76,13 +81,13 @@ export const nftHandler = {
       }
 
       const transactionId = await flowWallet.nft.revealPacks(address, privateKey, amount);
+      
+      // Esperar a que la transacción se selle
+      const txResult = await fcl.tx(transactionId).onceSealed();
 
-      return res.json({
-        success: true,
-        data: {
-          transactionId
-        }
-      });
+      console.log('✅ Transacción exitosa ID:', transactionId);
+      console.log('🔍 Resultado de la transacción:', txResult);
+      return res.json({ success: true, data: { transactionId } });
     } catch (error) {
       console.error('Error revealing packs:', error);
       return res.status(500).json({

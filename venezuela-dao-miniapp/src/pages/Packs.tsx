@@ -20,6 +20,15 @@ const PackCounter = styled(Typography)(({ theme }) => ({
   WebkitBackgroundClip: 'text',
   color: 'transparent',
   textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  animation: 'glow 2s ease-in-out infinite alternate',
+  '@keyframes glow': {
+    '0%': {
+      textShadow: '0 0 10px rgba(255,215,0,0.5)',
+    },
+    '100%': {
+      textShadow: '0 0 20px rgba(255,215,0,0.8)',
+    },
+  },
 }));
 
 const StyledButton = styled(Button)(({ theme }) => ({
@@ -28,20 +37,24 @@ const StyledButton = styled(Button)(({ theme }) => ({
   fontWeight: 'bold',
   textTransform: 'none',
   fontSize: '1rem',
+  background: 'linear-gradient(45deg, #333, #666)',
   boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
   '&:hover': {
+    background: 'linear-gradient(45deg, #444, #777)',
     boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
   },
+  transition: 'all 0.3s ease',
 }));
 
 const AmountButton = styled(Button)<{ active?: boolean }>(({ theme, active }) => ({
   borderRadius: '8px',
   minWidth: '60px',
-  backgroundColor: active ? theme.palette.primary.main : 'rgba(255,255,255,0.1)',
+  background: active ? 'linear-gradient(45deg, #333, #666)' : 'rgba(255,255,255,0.1)',
   color: active ? theme.palette.primary.contrastText : theme.palette.text.secondary,
   '&:hover': {
-    backgroundColor: active ? theme.palette.primary.dark : 'rgba(255,255,255,0.2)',
+    background: active ? 'linear-gradient(45deg, #444, #777)' : 'rgba(255,255,255,0.2)',
   },
+  transition: 'all 0.3s ease',
 }));
 
 export const Packs = () => {
@@ -67,7 +80,7 @@ export const Packs = () => {
     try {
       const result = await buyPacks.mutateAsync(buyAmount);
       if (result.success) {
-        WebApp.showAlert(`✨ ¡Compra exitosa!\nTransacción: ${result.data?.transactionId}`);
+        WebApp.showAlert(`✅ Compra exitosa!\nTX: ${result.data?.transactionId}`);
       }
     } catch (error) {
       WebApp.showAlert('❌ Error al comprar los packs');
@@ -78,7 +91,7 @@ export const Packs = () => {
     try {
       const result = await revealPacks.mutateAsync(revealAmount);
       if (result.success) {
-        WebApp.showAlert(`🎉 ¡${revealAmount} packs revelados!\nTransacción: ${result.data?.transactionId}`);
+        WebApp.showAlert(`🎉 ${revealAmount} packs revelados!\nTX: ${result.data?.transactionId}`);
       }
     } catch (error) {
       WebApp.showAlert('❌ Error al revelar los packs');
@@ -92,7 +105,7 @@ export const Packs = () => {
     <Container maxWidth="sm" sx={{ py: 3 }}>
       <Card sx={{ mb: 3 }}>
         <Typography variant="h5" color="primary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <ShoppingCartIcon /> Comprar Packs
+          <ShoppingCartIcon fontSize="large" /> Comprar Packs
         </Typography>
         
         <Box sx={{ mb: 3 }}>
@@ -115,7 +128,7 @@ export const Packs = () => {
             color="success"
             onClick={handleBuy}
             disabled={!user?.hasWallet || buyPacks.isPending}
-            startIcon={<ShoppingCartIcon />}
+            startIcon={<ShoppingCartIcon fontSize="large" />}
           >
             {buyPacks.isPending ? '⏳ Procesando...' : `Comprar ${buyAmount}`}
           </StyledButton>
@@ -124,7 +137,7 @@ export const Packs = () => {
             variant="contained"
             color="info"
             onClick={() => WebApp.showAlert("Cada pack contiene 3 NFTs aleatorios de diferentes rarezas")}
-            startIcon={<InfoIcon />}
+            startIcon={<InfoIcon fontSize="large" />}
           >
             Info Packs
           </StyledButton>
@@ -133,7 +146,7 @@ export const Packs = () => {
 
       <Card>
         <Typography variant="h5" color="primary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CardGiftcardIcon /> Packs por Revelar
+          <CardGiftcardIcon fontSize="large" /> Packs por Revelar
         </Typography>
 
         <PackCounter>
@@ -179,6 +192,20 @@ export const Packs = () => {
                   setRevealAmount(value as number);
                 }}
                 valueLabelDisplay="auto"
+                sx={{
+                  '& .MuiSlider-thumb': {
+                    backgroundColor: '#FFD700',
+                    '&:hover': {
+                      boxShadow: '0 0 10px rgba(255,215,0,0.5)',
+                    },
+                  },
+                  '& .MuiSlider-track': {
+                    backgroundColor: '#FFD700',
+                  },
+                  '& .MuiSlider-rail': {
+                    backgroundColor: 'rgba(255,215,0,0.3)',
+                  },
+                }}
               />
             </Box>
 
@@ -188,7 +215,7 @@ export const Packs = () => {
                 color="secondary"
                 onClick={handleReveal}
                 disabled={revealPacks.isPending}
-                startIcon={<CardGiftcardIcon />}
+                startIcon={<CardGiftcardIcon fontSize="large" />}
               >
                 {revealPacks.isPending ? '⏳ Revelando...' : `Revelar ${revealAmount}`}
               </StyledButton>
@@ -197,7 +224,7 @@ export const Packs = () => {
                 variant="contained"
                 color="warning"
                 onClick={() => WebApp.showAlert("Revelar packs mostrará los NFTs que has obtenido")}
-                startIcon={<HelpIcon />}
+                startIcon={<HelpIcon fontSize="large" />}
               >
                 ¿Cómo funciona?
               </StyledButton>
