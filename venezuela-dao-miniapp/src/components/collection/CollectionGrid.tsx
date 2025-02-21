@@ -20,7 +20,7 @@ const TypeTitle = styled(Typography)(({ theme }) => ({
 
 const Grid = styled('div')(({ theme }) => ({
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
   gap: theme.spacing(2),
 }));
 
@@ -31,7 +31,7 @@ const NFTCard = styled('div')(({ theme }) => ({
   overflow: 'hidden',
   cursor: 'pointer',
   transition: 'all 0.3s ease',
-  padding: theme.spacing(1),
+  padding: theme.spacing(0.5),
   boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
   '&:hover': {
     transform: 'scale(1.05)',
@@ -45,7 +45,7 @@ const NFTImage = styled('div')<{ $url?: string }>(({ theme, $url }) => ({
   background: $url ? `url(${$url})` : theme.palette.grey[800],
   backgroundSize: 'cover',
   backgroundPosition: 'center',
-  borderRadius: theme.spacing(0.5),
+  borderRadius: theme.spacing(0.25),
 }));
 
 const NFTInfo = styled(Box)(({ theme }) => ({
@@ -53,11 +53,11 @@ const NFTInfo = styled(Box)(({ theme }) => ({
   bottom: 0,
   left: 0,
   right: 0,
-  padding: theme.spacing(1.5),
+  padding: theme.spacing(1),
   background: 'rgba(0, 0, 0, 0.7)',
   backdropFilter: 'blur(4px)',
   color: theme.palette.common.white,
-  borderRadius: theme.spacing(0.5),
+  borderRadius: theme.spacing(0.25),
 }));
 
 const RarityBadge = styled('span')<{ $rarity: string }>(({ theme, $rarity }) => ({
