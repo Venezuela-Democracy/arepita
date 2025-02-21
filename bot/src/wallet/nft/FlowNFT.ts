@@ -1,15 +1,31 @@
 import * as fcl from "@onflow/fcl";
 import { flowAuth } from '../utils/auth';
-import { buyPack, revealPack, revealPacks } from "./transactions";
+import { buyPack, revealPack, revealPacks, dailyPacks } from "./transactions";
 import { getNFTMetadata, getNFTCardType, getNFTIds, getNFTCollection, getUnrevealedPacks } from "./scripts";
 
 
 export class FlowNFT {
   private NFT_CONTRACT_NAME = "VenezuelaNFT_20";
+  private Governance_CONTRACT_NAME = "Governance";
+
   ///                          ///
   ///// CADENCE TRANSACTIONS /////
   ///                          ///
+  // Get daily free Packs
+  async dailyPack(userAddress: string, privateKey: string): Promise<string> {
+    try {
+      const transactionId = await flowAuth.executeTransaction({
+        cadence: dailyPacks(this.Governance_CONTRACT_NAME, this.NFT_CONTRACT_NAME),
+        authOptions: { address: userAddress, privateKey },
+        limit: 999
+      });
 
+      return transactionId;
+    } catch (error) {
+      console.error('Error getting free packs:', error);
+      throw new Error('Failed claiming free packs');
+    }
+  }
   // Buy any amount of Packs
   async buyPack(userAddress: string, privateKey: string, amount: number = 1): Promise<string> {
     try {
