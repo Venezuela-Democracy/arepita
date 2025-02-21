@@ -52,7 +52,8 @@ export const nftHandler = {
 
   async revealPacks(req: Request, res: Response) {
     try {
-      const { telegramId, amount = 1 } = req.body;
+      const { amount = 1 } = req.body; 
+      const telegramId = req.params.telegramId; 
 
       if (!telegramId) {
         return res.status(400).json({

@@ -203,12 +203,13 @@ export class FlowNFT {
             let ids = cap.getIDs()
 
             for id in ids {
-              let nftRef = cap.borrowVenezuelaNFT(id: id)!
+              let nftRef = cap.borrowVenezuelaNFT_20(id: id)!
               let resolver = cap.borrowViewResolver(id: id)!
               let displayView = MetadataViews.getDisplay(resolver)!
               let serialView = MetadataViews.getSerial(resolver)!
               let traits = MetadataViews.getTraits(resolver)!
-              let cardType = ${this.NFT_CONTRACT_NAME}.getCardType(cardID: UInt32(nftRef.cardID))
+              let nftType = ${this.NFT_CONTRACT_NAME}.getNFTType(cardID: id)
+              let locationMetadata = ${this.NFT_CONTRACT_NAME}.getLocationMetaData(cardID: UInt32(id))
 
               nft = {
                 "cardMetadataID": nftRef.cardID,
@@ -216,7 +217,8 @@ export class FlowNFT {
                 "nftID": nftRef.id,
                 "serial": serialView,
                 "traits": traits,
-                "type": cardType
+                "type": nftType,
+                "locationMetadata": locationMetadata
               }
               
               answer.append(nft)

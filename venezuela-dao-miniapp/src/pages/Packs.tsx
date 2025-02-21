@@ -1,117 +1,48 @@
 import { useNFTTransactions } from '../hooks/useNFTTransactions';
 import { useUser } from '../hooks/useUser';
-import styled, { keyframes } from 'styled-components';
+import { Container, Typography, Button, Box, Slider, ButtonGroup } from '@mui/material';
 import { useEffect, useState } from 'react';
 import WebApp from '@twa-dev/sdk';
+import { Card } from '../components/shared/Card';
+import { styled } from '@mui/material/styles';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import InfoIcon from '@mui/icons-material/Info';
+import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
+import HelpIcon from '@mui/icons-material/Help';
 
-const glow = keyframes`
-  0% { filter: drop-shadow(0 0 5px #FFD700); }
-  50% { filter: drop-shadow(0 0 20px #FFD700); }
-  100% { filter: drop-shadow(0 0 5px #FFD700); }
-`;
+const PackCounter = styled(Typography)(({ theme }) => ({
+  fontSize: '3rem',
+  fontWeight: 'bold',
+  textAlign: 'center',
+  margin: theme.spacing(2, 0),
+  background: 'linear-gradient(45deg, #FFD700, #FFA500)',
+  backgroundClip: 'text',
+  WebkitBackgroundClip: 'text',
+  color: 'transparent',
+  textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+}));
 
-const Container = styled.div`
-  padding: 1rem;
-  height: 100vh;
-  background: var(--tg-theme-bg-color);
-  color: var(--tg-theme-text-color);
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-`;
+const StyledButton = styled(Button)(({ theme }) => ({
+  borderRadius: '12px',
+  padding: theme.spacing(1.5, 3),
+  fontWeight: 'bold',
+  textTransform: 'none',
+  fontSize: '1rem',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+  '&:hover': {
+    boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+  },
+}));
 
-const Section = styled.div`
-  background: var(--tg-theme-secondary-bg-color);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-`;
-
-const Title = styled.h2`
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-  color: var(--tg-theme-button-color);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const PackCounter = styled.div`
-  font-size: 2.5rem;
-  font-weight: bold;
-  text-align: center;
-  margin: 1rem 0;
-  color: var(--tg-theme-button-text-color);
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-  animation: ${glow} 2s infinite;
-`;
-
-const ButtonGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-top: 1rem;
-`;
-
-const ActionButton = styled.button<{ $color?: string }>`
-  padding: 1rem;
-  border: none;
-  border-radius: 1rem;
-  background: ${props => props.$color || "var(--tg-theme-button-color)"};
-  color: var(--tg-theme-button-text-color);
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.2s, opacity 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  
-  &:active {
-    transform: scale(0.95);
-  }
-  
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
-
-const RangeInput = styled.input`
-  width: 100%;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--tg-theme-secondary-bg-color);
-  margin: 1.5rem 0;
-  -webkit-appearance: none;
-
-  &::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--tg-theme-button-color);
-    cursor: pointer;
-  }
-`;
-
-const AmountSelector = styled.div`
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-`;
-
-const AmountButton = styled.button<{ $active?: boolean }>`
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  background: ${props => 
-    props.$active ? "var(--tg-theme-button-color)" : "var(--tg-theme-secondary-bg-color)"};
-  color: ${props => 
-    props.$active ? "var(--tg-theme-button-text-color)" : "var(--tg-theme-hint-color)"};
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-`;
+const AmountButton = styled(Button)<{ active?: boolean }>(({ theme, active }) => ({
+  borderRadius: '8px',
+  minWidth: '60px',
+  backgroundColor: active ? theme.palette.primary.main : 'rgba(255,255,255,0.1)',
+  color: active ? theme.palette.primary.contrastText : theme.palette.text.secondary,
+  '&:hover': {
+    backgroundColor: active ? theme.palette.primary.dark : 'rgba(255,255,255,0.2)',
+  },
+}));
 
 export const Packs = () => {
   const { user } = useUser();
@@ -136,7 +67,7 @@ export const Packs = () => {
     try {
       const result = await buyPacks.mutateAsync(buyAmount);
       if (result.success) {
-        WebApp.showAlert(`✅ Compra exitosa!\nTX: ${result.data?.transactionId}`);
+        WebApp.showAlert(`✨ ¡Compra exitosa!\nTransacción: ${result.data?.transactionId}`);
       }
     } catch (error) {
       WebApp.showAlert('❌ Error al comprar los packs');
@@ -147,7 +78,7 @@ export const Packs = () => {
     try {
       const result = await revealPacks.mutateAsync(revealAmount);
       if (result.success) {
-        WebApp.showAlert(`🎉 ${revealAmount} packs revelados!\nTX: ${result.data?.transactionId}`);
+        WebApp.showAlert(`🎉 ¡${revealAmount} packs revelados!\nTransacción: ${result.data?.transactionId}`);
       }
     } catch (error) {
       WebApp.showAlert('❌ Error al revelar los packs');
@@ -158,110 +89,122 @@ export const Packs = () => {
   const revealOptions = [1, 3, 5];
 
   return (
-    <Container>
-      {/* Sección de Compra */}
-      <Section>
-        <Title>🛒 Comprar Packs</Title>
-        <AmountSelector>
-          {buyOptions.map(amount => (
-            <AmountButton
-              key={amount}
-              $active={buyAmount === amount}
-              onClick={() => setBuyAmount(amount)}
-            >
-              {amount}x
-            </AmountButton>
-          ))}
-        </AmountSelector>
-        <ButtonGrid>
-          <ActionButton
+    <Container maxWidth="sm" sx={{ py: 3 }}>
+      <Card sx={{ mb: 3 }}>
+        <Typography variant="h5" color="primary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ShoppingCartIcon /> Comprar Packs
+        </Typography>
+        
+        <Box sx={{ mb: 3 }}>
+          <ButtonGroup variant="contained" fullWidth>
+            {buyOptions.map(amount => (
+              <AmountButton
+                key={amount}
+                active={buyAmount === amount}
+                onClick={() => setBuyAmount(amount)}
+              >
+                {amount}x
+              </AmountButton>
+            ))}
+          </ButtonGroup>
+        </Box>
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+          <StyledButton
+            variant="contained"
+            color="success"
             onClick={handleBuy}
             disabled={!user?.hasWallet || buyPacks.isPending}
-            $color="#4CAF50"
+            startIcon={<ShoppingCartIcon />}
           >
-            {buyPacks.isPending ? '⏳ Procesando...' : `Comprar ${buyAmount} Pack${buyAmount > 1 ? 's' : ''}`}
-          </ActionButton>
-          <ActionButton
+            {buyPacks.isPending ? '⏳ Procesando...' : `Comprar ${buyAmount}`}
+          </StyledButton>
+          
+          <StyledButton
+            variant="contained"
+            color="info"
             onClick={() => WebApp.showAlert("Cada pack contiene 3 NFTs aleatorios de diferentes rarezas")}
-            $color="#2196F3"
+            startIcon={<InfoIcon />}
           >
-            ℹ️ Info Packs
-          </ActionButton>
-        </ButtonGrid>
-      </Section>
+            Info Packs
+          </StyledButton>
+        </Box>
+      </Card>
 
-      {/* Sección de Revelado */}
-      <Section>
-        <Title>🎁 Packs por Revelar</Title>
+      <Card>
+        <Typography variant="h5" color="primary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CardGiftcardIcon /> Packs por Revelar
+        </Typography>
+
         <PackCounter>
-          {isLoadingUnrevealed ? 'Cargando...' : unrevealedPacks}
+          {isLoadingUnrevealed ? '...' : unrevealedPacks}
         </PackCounter>
         
         {unrevealedPacks > 0 && (
           <>
-            <AmountSelector>
-              {revealOptions.map(amount => (
+            <Box sx={{ mb: 3 }}>
+              <ButtonGroup variant="contained" fullWidth>
+                {revealOptions.map(amount => (
+                  <AmountButton
+                    key={amount}
+                    active={revealAmount === amount && selectedRevealType === 'some'}
+                    onClick={() => {
+                      setSelectedRevealType('some');
+                      setRevealAmount(amount);
+                    }}
+                    disabled={amount > unrevealedPacks}
+                  >
+                    {amount}x
+                  </AmountButton>
+                ))}
                 <AmountButton
-                  key={amount}
-                  $active={revealAmount === amount}
+                  active={selectedRevealType === 'all'}
                   onClick={() => {
-                    setSelectedRevealType('some');
-                    setRevealAmount(amount);
+                    setSelectedRevealType('all');
+                    setRevealAmount(unrevealedPacks);
                   }}
-                  disabled={amount > unrevealedPacks}
                 >
-                  {amount}x
+                  Todos
                 </AmountButton>
-              ))}
-              <AmountButton
-                $active={selectedRevealType === 'all'}
-                onClick={() => {
-                  setSelectedRevealType('all');
-                  setRevealAmount(unrevealedPacks);
+              </ButtonGroup>
+            </Box>
+
+            <Box sx={{ px: 2, mb: 3 }}>
+              <Slider
+                value={revealAmount}
+                min={1}
+                max={unrevealedPacks}
+                onChange={(_, value) => {
+                  setSelectedRevealType('some');
+                  setRevealAmount(value as number);
                 }}
-              >
-                Todos
-              </AmountButton>
-            </AmountSelector>
+                valueLabelDisplay="auto"
+              />
+            </Box>
 
-            <RangeInput
-              type="range"
-              min="1"
-              max={unrevealedPacks}
-              value={revealAmount}
-              onChange={(e) => {
-                setSelectedRevealType('some');
-                setRevealAmount(Number(e.target.value));
-              }}
-            />
-
-            <ButtonGrid>
-              <ActionButton
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <StyledButton
+                variant="contained"
+                color="secondary"
                 onClick={handleReveal}
                 disabled={revealPacks.isPending}
-                $color="#9C27B0"
+                startIcon={<CardGiftcardIcon />}
               >
                 {revealPacks.isPending ? '⏳ Revelando...' : `Revelar ${revealAmount}`}
-              </ActionButton>
-              <ActionButton
+              </StyledButton>
+              
+              <StyledButton
+                variant="contained"
+                color="warning"
                 onClick={() => WebApp.showAlert("Revelar packs mostrará los NFTs que has obtenido")}
-                $color="#FF9800"
+                startIcon={<HelpIcon />}
               >
-                ❓ ¿Cómo funciona?
-              </ActionButton>
-            </ButtonGrid>
+                ¿Cómo funciona?
+              </StyledButton>
+            </Box>
           </>
         )}
-      </Section>
-
-      {/* Sección de Tutorial */}
-      <Section>
-        <Title>📚 Guía Rápida</Title>
-        <p>1. Compra packs con tus tokens</p>
-        <p>2. Revela para ver tus NFTs</p>
-        <p>3. Usa NFTs en el juego</p>
-        <p>4. ¡Colecciona todas las rarezas!</p>
-      </Section>
+      </Card>
     </Container>
   );
 };

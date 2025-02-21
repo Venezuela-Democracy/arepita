@@ -38,6 +38,11 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+interface UserStats {
+  unrevealedPacks: number;
+  totalNFTs: number;
+}
+
 export const apiService = {
 
   sendLog: async (message: string, data?: any, level: 'info' | 'error' = 'info'): Promise<void> => {
@@ -160,7 +165,7 @@ export const apiService = {
         throw new Error('Usuario no autenticado');
       }
       
-      const { data } = await api.post(`/nft/${telegramId}/buy`, request);
+      const { data } = await api.post(`/nft/buy/${telegramId}`, request);
       return data;
     } catch (error) {
       console.error('Error al comprar pack:', error);
@@ -178,7 +183,7 @@ export const apiService = {
         throw new Error('Usuario no autenticado');
       }
       
-      const { data } = await api.post(`/nft/${telegramId}/reveal`, request);
+      const { data } = await api.post(`/nft/reveal/${telegramId}`, request);
       return data;
     } catch (error) {
       console.error('Error al revelar packs:', error);
@@ -326,6 +331,16 @@ export const apiService = {
         success: false,
         error: 'Error al registrar usuario'
       };
+    }
+  },
+
+  // Obtener estadísticas del usuario
+  getUserStats: async (address: string): Promise<ApiResponse<UserStats>> => {
+    try {
+      const response = await fetch(`/api/user/stats/${address}`);
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: 'Error al obtener las estadísticas' };
     }
   },
 };

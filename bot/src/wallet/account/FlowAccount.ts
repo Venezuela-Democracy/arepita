@@ -30,6 +30,11 @@ export class FlowAccount {
               let oldLink = signer.capabilities.unpublish(collectionData.publicPath)
               let collectionCap = signer.capabilities.storage.issue<&${nftContractName}.Collection>(collectionData.storagePath)
               signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
+              
+              let storage <- ${nftContractName}.createEmptyStorage()
+              signer.storage.save(<- storage, to: ${nftContractName}.ReceiptStoragePath)
+              let storageCap = signer.capabilities.storage.issue<&${nftContractName}.ReceiptStorage>(${nftContractName}.ReceiptStoragePath)
+              signer.capabilities.publish(storageCap, at: ${nftContractName}.ReceiptStoragePublic)
             }
           }
         }

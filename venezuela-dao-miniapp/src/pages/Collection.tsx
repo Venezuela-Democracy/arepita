@@ -1,6 +1,10 @@
 import { useNFTCollection } from '../hooks/useNFTColecction';
-import styled, { keyframes } from 'styled-components';
-import { useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { CollectionGrid } from '../components/collection/CollectionGrid';
+import { IconButton, Box } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { styled as muiStyled } from '@mui/material/styles';
+import { styled as scStyled, keyframes } from 'styled-components';
 
 const shine = keyframes`
   0% { background-position: -200% center; }
@@ -21,7 +25,20 @@ const typeColors = {
   culturalItems: '#9C27B0'
 };
 
-const MainContainer = styled.div`
+const BackButton = muiStyled(IconButton)(({ theme }) => ({
+  position: 'fixed',
+  top: theme.spacing(2),
+  left: theme.spacing(2),
+  zIndex: 1000,
+  background: 'rgba(0, 0, 0, 0.5)',
+  color: theme.palette.common.white,
+  backdropFilter: 'blur(4px)',
+  '&:hover': {
+    background: 'rgba(0, 0, 0, 0.7)',
+  },
+}));
+
+const MainContainer = scStyled.div`
   height: 100vh;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
@@ -29,7 +46,7 @@ const MainContainer = styled.div`
   background: var(--tg-theme-bg-color);
 `;
 
-const CardsContainer = styled.div`
+const CardsContainer = scStyled.div`
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
@@ -45,7 +62,7 @@ const CardsContainer = styled.div`
   }
 `;
 
-const CardWrapper = styled.div`
+const CardWrapper = scStyled.div`
   flex: 0 0 100%;
   scroll-snap-align: center;
   height: 100%;
@@ -53,7 +70,11 @@ const CardWrapper = styled.div`
   flex-direction: column;
 `;
 
-const CardFrame = styled.div<{ $rarity?: string }>`
+interface RarityProps {
+  $rarity: string;
+}
+
+const CardFrame = scStyled.div<RarityProps>`
   position: relative;
   flex: 1;
   background: var(--tg-theme-bg-color);
@@ -85,7 +106,7 @@ const CardFrame = styled.div<{ $rarity?: string }>`
   }
 `;
 
-const CardInner = styled.div`
+const CardInner = scStyled.div`
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -93,7 +114,7 @@ const CardInner = styled.div`
   z-index: 2;
 `;
 
-const NFTImage = styled.div<{ $url?: string }>`
+const NFTImage = scStyled.div<{ $url?: string }>`
   height: 45vh;
   background: ${props => props.$url ? `url(${props.$url})` : 'var(--tg-theme-hint-color)'};
   background-size: cover;
@@ -111,7 +132,7 @@ const NFTImage = styled.div<{ $url?: string }>`
   }
 `;
 
-const Badge = styled.div`
+const Badge = scStyled.div`
   position: absolute;
   padding: 0.5rem 1rem;
   border-radius: 20px;
@@ -122,13 +143,13 @@ const Badge = styled.div`
   z-index: 2;
 `;
 
-const RarityBadge = styled(Badge)<{ $rarity: string }>`
+const RarityBadge = scStyled(Badge)<{ $rarity: string }>`
   top: 1rem;
   right: 1rem;
   color: ${props => rarityGlow[props.$rarity as keyof typeof rarityGlow] || '#fff'};
 `;
 
-const TypeBadge = styled(Badge)<{ $type: string }>`
+const TypeBadge = scStyled(Badge)<{ $type: string }>`
   top: 1rem;
   left: 50%;
   transform: translateX(-50%);
@@ -138,13 +159,13 @@ const TypeBadge = styled(Badge)<{ $type: string }>`
   gap: 0.5rem;
 `;
 
-const CountBadge = styled(Badge)`
+const CountBadge = scStyled(Badge)`
   top: 1rem;
   left: 1rem;
   color: white;
 `;
 
-const IPBadge = styled(Badge)`
+const IPBadge = scStyled(Badge)`
   bottom: 1rem;
   right: 1rem;
   color: white;
@@ -153,7 +174,7 @@ const IPBadge = styled(Badge)`
   gap: 0.5rem;
 `;
 
-const CardContent = styled.div`
+const CardContent = scStyled.div`
   padding: 1.5rem;
   flex: 1;
   overflow-y: auto;
@@ -173,26 +194,26 @@ const CardContent = styled.div`
   }
 `;
 
-const TitleContainer = styled.div`
+const TitleContainer = scStyled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 1rem;
 `;
 
-const Title = styled.h2`
+const Title = scStyled.h2`
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--tg-theme-text-color);
 `;
 
-const Description = styled.p`
+const Description = scStyled.p`
   color: var(--tg-theme-hint-color);
   font-size: 0.95rem;
   line-height: 1.5;
 `;
 
-const CategoryIndicator = styled.div`
+const CategoryIndicator = scStyled.div`
   position: fixed;
   bottom: 1rem;
   left: 50%;
@@ -224,10 +245,23 @@ export const CollectionPage = () => {
     setCurrentIndex
   } = useNFTCollection();
 
+  const [isDetailView, setIsDetailView] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const mainContainerRef = useRef<HTMLDivElement>(null);
 
+  const handleNFTClick = (type: string, index: number) => {
+    setCurrentType(type as typeof currentType);
+    setCurrentIndex(index);
+    setIsDetailView(true);
+  };
+
+  const handleBack = () => {
+    setIsDetailView(false);
+  };
+
   useEffect(() => {
+    if (!isDetailView) return;
+
     const container = containerRef.current;
     if (!container) return;
 
@@ -242,9 +276,11 @@ export const CollectionPage = () => {
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [currentIndex, setCurrentIndex]);
+  }, [currentIndex, setCurrentIndex, isDetailView]);
 
   useEffect(() => {
+    if (!isDetailView) return;
+
     const container = mainContainerRef.current;
     if (!container) return;
 
@@ -263,66 +299,80 @@ export const CollectionPage = () => {
 
     container.addEventListener('scroll', handleVerticalScroll);
     return () => container.removeEventListener('scroll', handleVerticalScroll);
-  }, [currentType, setCurrentType, setCurrentIndex]);
+  }, [currentType, setCurrentType, setCurrentIndex, isDetailView]);
+
+  if (!collection) {
+    return <div>Cargando colección...</div>;
+  }
+
+  if (!isDetailView) {
+    return <CollectionGrid collection={collection} onNFTClick={handleNFTClick} />;
+  }
 
   const currentNFTs = collection?.[currentType] || [];
 
   return (
-    <MainContainer ref={mainContainerRef}>
-      {['locations', 'characters', 'culturalItems'].map((type) => (
-        <CardsContainer key={type} ref={type === currentType ? containerRef : undefined}>
-          {(collection?.[type as keyof typeof collection] || []).map((nft) => {
-            const rarity = nft.instances[0]?.traits.traits.find(
-              t => t.name === 'rarity'
-            )?.value || 'Common';
+    <Box sx={{ position: 'relative' }}>
+      <BackButton onClick={handleBack}>
+        <ArrowBackIcon />
+      </BackButton>
 
-            const influencePoints = nft.instances[0]?.traits.traits.find(
-              t => t.name === 'influence_generation'
-            )?.value || '1';
+      <MainContainer ref={mainContainerRef}>
+        {['locations', 'characters', 'culturalItems'].map((type) => (
+          <CardsContainer key={type} ref={type === currentType ? containerRef : undefined}>
+            {(collection?.[type as keyof typeof collection] || []).map((nft) => {
+              const rarity = nft.instances[0]?.traits.traits.find(
+                t => t.name === 'rarity'
+              )?.value || 'Common';
 
-            return (
-              <CardWrapper key={nft.metadataId}>
-                <CardFrame $rarity={rarity}>
-                  <CardInner>
-                    <NFTImage $url={nft.display.thumbnail?.url}>
-                      <RarityBadge $rarity={rarity}>
-                        {rarity}
-                      </RarityBadge>
-                      <TypeBadge $type={type}>
-                        {TypeInfo[type as keyof typeof TypeInfo].icon} 
-                        {TypeInfo[type as keyof typeof TypeInfo].label}
-                      </TypeBadge>
-                      <CountBadge>
-                        {nft.count} {nft.count > 1 ? 'copias' : 'copia'}
-                      </CountBadge>
-                      <IPBadge>
-                        <span>⚡</span> IP: {influencePoints}
-                      </IPBadge>
-                    </NFTImage>
-                    
-                    <CardContent>
-                      <TitleContainer>
-                        <Title>{nft.display.name}</Title>
-                      </TitleContainer>
-                      <Description>
-                        {nft.display.description}
-                      </Description>
-                    </CardContent>
-                  </CardInner>
-                </CardFrame>
-              </CardWrapper>
-            );
-          })}
-        </CardsContainer>
-      ))}
+              const influencePoints = nft.instances[0]?.traits.traits.find(
+                t => t.name === 'influence_generation'
+              )?.value || '1';
 
-      <CategoryIndicator>
-        {TypeInfo[currentType].icon}
-        <span>
-          {currentIndex + 1} / {currentNFTs.length}
-        </span>
-      </CategoryIndicator>
-    </MainContainer>
+              return (
+                <CardWrapper key={nft.metadataId}>
+                  <CardFrame $rarity={rarity}>
+                    <CardInner>
+                      <NFTImage $url={nft.display.thumbnail?.url}>
+                        <RarityBadge $rarity={rarity}>
+                          {rarity}
+                        </RarityBadge>
+                        <TypeBadge $type={type}>
+                          {TypeInfo[type as keyof typeof TypeInfo].icon} 
+                          {TypeInfo[type as keyof typeof TypeInfo].label}
+                        </TypeBadge>
+                        <CountBadge>
+                          {nft.count} {nft.count > 1 ? 'copias' : 'copia'}
+                        </CountBadge>
+                        <IPBadge>
+                          <span>⚡</span> IP: {influencePoints}
+                        </IPBadge>
+                      </NFTImage>
+                      
+                      <CardContent>
+                        <TitleContainer>
+                          <Title>{nft.display.name}</Title>
+                        </TitleContainer>
+                        <Description>
+                          {nft.display.description}
+                        </Description>
+                      </CardContent>
+                    </CardInner>
+                  </CardFrame>
+                </CardWrapper>
+              );
+            })}
+          </CardsContainer>
+        ))}
+
+        <CategoryIndicator>
+          {TypeInfo[currentType].icon}
+          <span>
+            {currentIndex + 1} / {currentNFTs.length}
+          </span>
+        </CategoryIndicator>
+      </MainContainer>
+    </Box>
   );
 };
 

@@ -22,7 +22,6 @@ export const useUser = () => {
   const createWalletMutation = useMutation({
     mutationFn: () => apiService.createWallet(),
     onSuccess: () => {
-      // Invalidate queries to refresh user data
       queryClient.invalidateQueries({ queryKey: ['user'] });
       queryClient.invalidateQueries({ queryKey: ['balance'] });
     },
@@ -41,7 +40,6 @@ export const useUser = () => {
       });
     },
     onSuccess: () => {
-      // Invalidar queries para actualizar los datos del usuario
       queryClient.invalidateQueries({ queryKey: ['user'] });
       queryClient.invalidateQueries({ queryKey: ['balance'] });
     },
