@@ -1,46 +1,21 @@
 import * as fcl from "@onflow/fcl";
 import { flowConfig } from '../config';
 import { flowAuth } from '../utils/auth';
+import { buyPack, revealPack, revealPacks } from "./transactions";
+import { getNFTMetadata, getNFTCardType, getNFTIds, getNFTCollection, getUnrevealedPacks } from "./scripts";
+
 
 export class FlowNFT {
   private NFT_CONTRACT_NAME = "VenezuelaNFT_20";
+  ///                          ///
+  ///// CADENCE TRANSACTIONS /////
+  ///                          ///
 
+  // Buy any amount of Packs
   async buyPack(userAddress: string, privateKey: string, amount: number = 1): Promise<string> {
     try {
-      const cadence = `
-        import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-        import NonFungibleToken from ${flowConfig.nonFungibleToken}
-        import MetadataViews from ${flowConfig.metadataViews}
-        import FlowToken from ${flowConfig.flowToken}
-        import FungibleToken from ${flowConfig.fungibleToken}
-
-        transaction(setID: UInt32, amount: Int) {
-          prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue, UnpublishCapability) &Account) {
-            if signer.storage.type(at: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath) == nil {
-              let storage <- ${this.NFT_CONTRACT_NAME}.createEmptyStorage()
-              signer.storage.save(<- storage, to: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
-              let storageCap = signer.capabilities.storage.issue<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
-              signer.capabilities.publish(storageCap, at: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePublic)
-            }
-
-            let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
-              ?? panic("Could not borrow Flow Token Vault reference")
-
-            let storageRef = signer.storage.borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(from: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
-              ?? panic("Cannot borrow a reference to the recipient's VenezuelaNFT ReceiptStorage")
-            
-            var counter = 0
-            while counter < amount {
-              let receipt <- ${this.NFT_CONTRACT_NAME}.buyPackFlow(setID: setID, payment: <- vaultRef.withdraw(amount: 1.0))
-              storageRef.deposit(receipt: <- receipt)
-              counter = counter + 1
-            }
-          }
-        }
-      `;
-
       const transactionId = await flowAuth.executeTransaction({
-        cadence,
+        cadence: buyPack(this.NFT_CONTRACT_NAME),
         argsFn: (arg: any, t: any) => [
           arg(0, t.UInt32),
           arg(amount, t.Int)
@@ -55,32 +30,11 @@ export class FlowNFT {
       throw new Error('Failed to buy pack');
     }
   }
-
+  // Reveal one(1) pack
   async revealPack(userAddress: string, privateKey: string): Promise<string> {
     try {
-      const cadence = `
-        import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-        import NonFungibleToken from ${flowConfig.nonFungibleToken}
-        import MetadataViews from ${flowConfig.metadataViews}
-
-        transaction {
-          prepare(signer: auth(BorrowValue, LoadValue) &Account) {
-            let storageRef = signer.storage.borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(from: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
-                ?? panic("Cannot borrow a reference to the recipient's VenezuelaNFT ReceiptStorage")
-            
-            let receipt <- storageRef.withdraw()
-
-            ${this.NFT_CONTRACT_NAME}.revealPack(
-              receipt: <-receipt, 
-              minter: signer.address,
-              emptyDict: {}
-            )
-          }
-        }
-      `;
-
       const transactionId = await flowAuth.executeTransaction({
-        cadence,
+        cadence: revealPack(this.NFT_CONTRACT_NAME),
         authOptions: { address: userAddress, privateKey },
         limit: 999
       });
@@ -91,32 +45,38 @@ export class FlowNFT {
       throw new Error('Failed to reveal pack');
     }
   }
+  // Reveal any amount of packs
+  async revealPacks(userAddress: string, privateKey: string, amount: number): Promise<string> {
+    try {
+      const transactionId = await flowAuth.executeTransaction({
+        cadence: revealPacks(this.NFT_CONTRACT_NAME),
+        argsFn: (arg: any, t: any) => [ arg(amount, t.Int) ],
+        authOptions: { address: userAddress, privateKey },
+        limit: 999
+      });
 
+      return transactionId;
+    } catch (error) {
+      console.error('Error revealing packs:', error);
+      throw new Error('Failed to reveal packs');
+    }
+  }
+  ///                     ///
+  ///// CADENCE SCRIPTS /////
+  ///                    ///
   async getNFTMetadata(cardID: number): Promise<any> {
     try {
       console.log("Getting type for Card ID:", cardID);
       
       const cardType = await fcl.query({
-        cadence: `
-          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-          
-          access(all) fun main(cardID: UInt32): Type {
-            return ${this.NFT_CONTRACT_NAME}.getCardType(cardID: cardID)
-          }
-        `,
+        cadence: getNFTCardType(this.NFT_CONTRACT_NAME),
         args: (arg: any, t: any) => [ arg(cardID, t.UInt32) ]
       });
 
       console.log("Card type:", cardType.typeID);
 
       const metadata = await fcl.query({
-        cadence: `
-          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-          
-          access(all) fun main(cardID: UInt32): AnyStruct {
-            return ${this.NFT_CONTRACT_NAME}.getCardMetadata(cardID: cardID, cardType: ${this.NFT_CONTRACT_NAME}.getCardType(cardID: cardID))
-          }
-        `,
+        cadence: getNFTMetadata(this.NFT_CONTRACT_NAME),
         args: (arg: any, t: any) => [ arg(cardID, t.UInt32) ]
       });
 
@@ -134,19 +94,7 @@ export class FlowNFT {
   async getNFTIds(address: string): Promise<number[]> {
     try {
       const ids = await fcl.query({
-        cadence: `
-          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-
-          access(all) fun main(account: Address): [UInt64] {
-            let account = getAccount(account)
-            
-            let cap = account.capabilities
-              .borrow<&${this.NFT_CONTRACT_NAME}.Collection>(${this.NFT_CONTRACT_NAME}.CollectionPublicPath)
-              ?? panic("Could not borrow collection capability")
-
-            return cap.getIDs()
-          }
-        `,
+        cadence: getNFTIds(this.NFT_CONTRACT_NAME),
         args: (arg: any, t: any) => [ arg(address, t.Address) ]
       });
 
@@ -163,13 +111,7 @@ export class FlowNFT {
       console.log("Attempting to get type for Card ID:", cardID);
       
       const cardType = await fcl.query({
-        cadence: `
-          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-          
-          access(all) fun main(cardID: UInt32): Type {
-            return ${this.NFT_CONTRACT_NAME}.getCardType(cardID: cardID)
-          }
-        `,
+        cadence: getNFTCardType(this.NFT_CONTRACT_NAME),
         args: (arg: any, t: any) => [ arg(cardID, t.UInt32) ]
       });
 
@@ -188,44 +130,7 @@ export class FlowNFT {
   }> {
     try {
       const nfts = await fcl.query({
-        cadence: `
-          import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-          import MetadataViews from ${flowConfig.metadataViews}
-
-          access(all) fun main(account: Address): [AnyStruct]? {
-            let account = getAccount(account)
-            let answer: [AnyStruct] = []
-            var nft: AnyStruct = nil
-
-            let cap = account.capabilities
-              .borrow<&${this.NFT_CONTRACT_NAME}.Collection>(${this.NFT_CONTRACT_NAME}.CollectionPublicPath)!
-
-            let ids = cap.getIDs()
-
-            for id in ids {
-              let nftRef = cap.borrowVenezuelaNFT_20(id: id)!
-              let resolver = cap.borrowViewResolver(id: id)!
-              let displayView = MetadataViews.getDisplay(resolver)!
-              let serialView = MetadataViews.getSerial(resolver)!
-              let traits = MetadataViews.getTraits(resolver)!
-              let nftType = ${this.NFT_CONTRACT_NAME}.getNFTType(cardID: id)
-              let locationMetadata = ${this.NFT_CONTRACT_NAME}.getLocationMetaData(cardID: UInt32(id))
-
-              nft = {
-                "cardMetadataID": nftRef.cardID,
-                "display": displayView,
-                "nftID": nftRef.id,
-                "serial": serialView,
-                "traits": traits,
-                "type": nftType,
-                "locationMetadata": locationMetadata
-              }
-              
-              answer.append(nft)
-            }
-            return answer
-          }
-        `,
+        cadence: getNFTCollection(this.NFT_CONTRACT_NAME),
         args: (arg: any, t: any) => [ arg(address, t.Address) ]
       });
 
@@ -294,19 +199,8 @@ export class FlowNFT {
 
   async getUnrevealedPacks(address: string): Promise<number> {
     try {
-      const cadence = `
-        import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
-
-        access(all) fun main(account: Address): Int {
-          let account = getAccount(account)
-          let cap = account.capabilities
-            .borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(${this.NFT_CONTRACT_NAME}.ReceiptStoragePublic)!
-          return cap.getBalance()
-        }
-      `;
-
       const packs = await fcl.query({
-        cadence,
+        cadence: getUnrevealedPacks(this.NFT_CONTRACT_NAME),
         args: (arg: any, t: any) => [ arg(address, t.Address) ]
       });
 
@@ -317,44 +211,7 @@ export class FlowNFT {
     }
   }
 
-  async revealPacks(userAddress: string, privateKey: string, amount: number): Promise<string> {
-    try {
-      const cadence = `
-        import ${this.NFT_CONTRACT_NAME} from ${flowConfig.venezuelaNFTAddress}
 
-        transaction(amount: Int) {
-          prepare(signer: auth(BorrowValue, LoadValue) &Account) {
-            let storageRef = signer.storage
-              .borrow<&${this.NFT_CONTRACT_NAME}.ReceiptStorage>(from: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)
-              ?? panic("Cannot borrow a reference to the recipient's VenezuelaNFT ReceiptStorage")
-
-            var counter = 0
-            while counter < amount {
-              let receipt <- storageRef.withdraw()
-              ${this.NFT_CONTRACT_NAME}.revealPack(
-                receipt: <- receipt, 
-                minter: signer.address, 
-                emptyDict: {}
-              )
-              counter = counter + 1
-            }
-          }
-        }
-      `;
-
-      const transactionId = await flowAuth.executeTransaction({
-        cadence,
-        argsFn: (arg: any, t: any) => [ arg(amount, t.Int) ],
-        authOptions: { address: userAddress, privateKey },
-        limit: 999
-      });
-
-      return transactionId;
-    } catch (error) {
-      console.error('Error revealing packs:', error);
-      throw new Error('Failed to reveal packs');
-    }
-  }
 }
 
 export const flowNFT = new FlowNFT(); 
