@@ -1,5 +1,5 @@
 import { flowAuth } from '../utils/auth';
-import { equipLocation, vote } from './transactions';
+import { equipLocation, vote, resetDaily } from './transactions';
 import * as fcl from "@onflow/fcl";
 import { getVotes, getTopics, getRegionDP, getRegions } from './scripts';
 
@@ -10,7 +10,21 @@ export class DAO {
   ///                          ///
   ///// CADENCE TRANSACTIONS /////
   ///                          ///
-
+  // Reset de daily counter for free packs
+  async resetDaily(address: string, privateKey: string):  Promise<any>{
+    try {
+      const transactionId = await flowAuth.executeTransaction({
+        cadence: resetDaily(this.Governance_CONTRACT_NAME),
+        authOptions: { address, privateKey },
+        limit: 999
+      });
+  
+      return transactionId;
+    } catch (error) {
+      console.error('Error equipping a Location card:', error);
+      throw new Error('Failed to equip a Location card');
+    }      
+  }
   // Equip a Location card in order to be able to vote
   async equipLocation(address: string, privateKey: string, nftID: number): Promise<string> {
     try {
@@ -113,12 +127,13 @@ export class DAO {
         throw new Error('Error getting regions');
       }
     }
+    // Get a region's DP
     async getRegionDP(regionName: string): Promise<any> {
       try {
         console.log("Getting all Development Points in region: ", regionName);
         
         const topics = await fcl.query({
-          cadence: getTopics(this.Governance_CONTRACT_NAME),
+          cadence: getRegionDP(this.Governance_CONTRACT_NAME),
           args: (arg: any, t: any) => [ 
             arg(regionName, t.String),
           ]
@@ -133,6 +148,7 @@ export class DAO {
         throw new Error('Error getting DP');
       }
     }
+
 }
 
 export const flowAccount = new DAO(); 
