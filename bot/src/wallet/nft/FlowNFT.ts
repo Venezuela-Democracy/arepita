@@ -1,5 +1,4 @@
 import * as fcl from "@onflow/fcl";
-import { flowConfig } from '../config';
 import { flowAuth } from '../utils/auth';
 import { buyPack, revealPack, revealPacks } from "./transactions";
 import { getNFTMetadata, getNFTCardType, getNFTIds, getNFTCollection, getUnrevealedPacks } from "./scripts";

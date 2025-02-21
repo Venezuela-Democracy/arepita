@@ -1,5 +1,5 @@
 import { flowAuth } from '../utils/auth';
-import { SETUP_STOREFRONT_TRANSACTION, CREATE_LISTING_TRANSACTION, PURCHASE_LISTING_TRANSACTION } from '../transactions';
+import { SETUP_STOREFRONT_TRANSACTION, CREATE_LISTING_TRANSACTION, PURCHASE_LISTING_TRANSACTION } from './transactions';
 
 export class FlowStorefront {
   async setupStorefront(address: string, privateKey: string): Promise<string> {
