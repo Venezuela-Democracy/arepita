@@ -16,17 +16,6 @@ export class FlowNFT {
 
         transaction(setID: UInt32, amount: Int) {
           prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue, UnpublishCapability) &Account) {
-            let collectionData = ${this.NFT_CONTRACT_NAME}.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
-              ?? panic("ViewResolver does not resolve NFTCollectionData view")
-            
-            if signer.storage.borrow<&${this.NFT_CONTRACT_NAME}.Collection>(from: collectionData.storagePath) == nil {
-              let collection <- ${this.NFT_CONTRACT_NAME}.createEmptyCollection(nftType: Type<@${this.NFT_CONTRACT_NAME}.NFT>())
-              signer.storage.save(<-collection, to: collectionData.storagePath)
-              let oldLink = signer.capabilities.unpublish(collectionData.publicPath)
-              let collectionCap = signer.capabilities.storage.issue<&${this.NFT_CONTRACT_NAME}.Collection>(collectionData.storagePath)
-              signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
-            }
-
             if signer.storage.type(at: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath) == nil {
               let storage <- ${this.NFT_CONTRACT_NAME}.createEmptyStorage()
               signer.storage.save(<- storage, to: ${this.NFT_CONTRACT_NAME}.ReceiptStoragePath)

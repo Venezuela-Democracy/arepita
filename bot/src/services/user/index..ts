@@ -1,4 +1,4 @@
-import { User, IUser } from '../../models';
+import { User } from '../../models';
 import { VenezuelaRegion, SupportedLanguage } from '../../bot/types';
 import { FlowAuthData } from './types';
 

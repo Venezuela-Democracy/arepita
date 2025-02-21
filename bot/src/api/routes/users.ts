@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { UserService } from '../../services';
+import { userHandler } from '../handlers/userHandler';
 
 export const userRoutes = () => {
   const router = Router();
+
+  router.post('/register', userHandler.registerUser);
 
   router.get('/:telegramId', async (req, res) => {
     try {

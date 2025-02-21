@@ -77,6 +77,21 @@ export const apiService = {
         hasWallet: !!userApiData?.data?.address
       };
 
+      // Si no hay datos en la base de datos, usamos solo la información de Telegram
+      if (!userApiData?.data) {
+        return {
+          success: true,
+          data: {
+            id: telegramUser.id.toString(),
+            avatarUrl: telegramUser.photo_url || 'https://via.placeholder.com/150',
+            username: telegramUser.username || telegramUser.first_name,
+            address: '',
+            language: 'es',
+            region: 'CARACAS',
+            hasWallet: false
+          }
+        };
+      }
 
       return {
         success: true,
@@ -138,9 +153,14 @@ export const apiService = {
     }
   },
 
-  buyPack: async (address: string, request: BuyPackRequest): Promise<ApiResponse<{ transactionId: string }>> => {
+  buyPack: async (request: BuyPackRequest): Promise<ApiResponse<{ transactionId: string }>> => {
     try {
-      const { data } = await api.post(`/wallet/${address}/buy-pack`, request);
+      const telegramId = WebApp.initDataUnsafe?.user?.id;
+      if (!telegramId) {
+        throw new Error('Usuario no autenticado');
+      }
+      
+      const { data } = await api.post(`/nft/${telegramId}/buy`, request);
       return data;
     } catch (error) {
       console.error('Error al comprar pack:', error);
@@ -151,9 +171,14 @@ export const apiService = {
     }
   },
 
-  revealPacks: async (address: string, request: RevealPacksRequest): Promise<ApiResponse<{ transactionId: string }>> => {
+  revealPacks: async (request: RevealPacksRequest): Promise<ApiResponse<{ transactionId: string }>> => {
     try {
-      const { data } = await api.post(`/wallet/${address}/reveal-packs`, request);
+      const telegramId = WebApp.initDataUnsafe?.user?.id;
+      if (!telegramId) {
+        throw new Error('Usuario no autenticado');
+      }
+      
+      const { data } = await api.post(`/nft/${telegramId}/reveal`, request);
       return data;
     } catch (error) {
       console.error('Error al revelar packs:', error);
@@ -167,6 +192,24 @@ export const apiService = {
   getUnrevealedPacks: async (address: string): Promise<ApiResponse<Pack[]>> => {
     try {
       const { data } = await api.get(`/wallet/${address}/unrevealed-packs`);
+      return data;
+    } catch (error) {
+      console.error('Error al obtener packs sin revelar:', error);
+      return {
+        success: false,
+        error: 'Error al obtener packs sin revelar'
+      };
+    }
+  },
+
+  getUnrevealedPacksCount: async (): Promise<ApiResponse<{ unrevealedPacks: number }>> => {
+    try {
+      const telegramId = WebApp.initDataUnsafe?.user?.id;
+      if (!telegramId) {
+        throw new Error('Usuario no autenticado');
+      }
+      
+      const { data } = await api.get(`/nft/unrevealed/${telegramId}`);
       return data;
     } catch (error) {
       console.error('Error al obtener packs sin revelar:', error);
@@ -240,5 +283,49 @@ export const apiService = {
         error: 'Error al obtener los NFTs por tipo'
       };
     }
-  }
+  },
+
+  createWallet: async (): Promise<ApiResponse<{ address: string }>> => {
+    try {
+      const telegramId = WebApp.initDataUnsafe?.user?.id;
+      if (!telegramId) {
+        throw new Error('Usuario no autenticado');
+      }
+      
+      const { data } = await api.post(`/users/${telegramId}/wallet`);
+      console.log('🎉 Wallet created successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Error creating wallet:', error);
+      return {
+        success: false,
+        error: 'Error al crear wallet'
+      };
+    }
+  },
+
+  registerUser: async ({ 
+    telegramId, 
+    region, 
+    language 
+  }: { 
+    telegramId: string; 
+    region: string; 
+    language: string; 
+  }): Promise<ApiResponse<{ address: string }>> => {
+    try {
+      const { data } = await api.post(`/users/register`, {
+        telegramId,
+        region,
+        language
+      });
+      return data;
+    } catch (error) {
+      console.error('Error registering user:', error);
+      return {
+        success: false,
+        error: 'Error al registrar usuario'
+      };
+    }
+  },
 };

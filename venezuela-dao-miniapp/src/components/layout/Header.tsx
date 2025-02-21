@@ -52,8 +52,31 @@ const Address = styled.div`
   cursor: pointer;
 `;
 
+const CreateWalletButton = styled.button`
+  background: var(--tg-theme-button-color);
+  color: var(--tg-theme-button-text-color);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
 export const Header = () => {
-  const { user, balance, hasWallet, isLoadingBalance } = useUser();
+  const { 
+    user, 
+    balance, 
+    hasWallet, 
+    isLoadingBalance,
+    register,
+    isRegistering 
+  } = useUser();
   const [showCopied, setShowCopied] = useState(false);
 
   const copyAddress = async () => {
@@ -64,13 +87,17 @@ export const Header = () => {
     }
   };
 
+  const handleRegister = () => {
+    register({ region: 'CARACAS', language: 'es' });
+  };
+
   const formatAddress = (addr: string) => 
     `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
   return (
     <HeaderContainer>
       <UserInfo>
-        <Avatar src={user?.avatarUrl} alt="User avatar" />
+        <Avatar src={user?.avatarUrl || 'default-avatar-url'} alt="User avatar" />
         {hasWallet ? (
           <WalletInfo>
             <Balance loading={isLoadingBalance}>
@@ -95,7 +122,12 @@ export const Header = () => {
         ) : (
           <WalletInfo>
             <Balance>No Wallet</Balance>
-            <Address>Create a wallet to start</Address>
+            <CreateWalletButton 
+              onClick={handleRegister}
+              disabled={isRegistering}
+            >
+              {isRegistering ? 'Registering...' : 'Register'}
+            </CreateWalletButton>
           </WalletInfo>
         )}
       </UserInfo>

@@ -1,7 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../api';
+import WebApp from '@twa-dev/sdk';
 
 export const useUser = () => {
+  const queryClient = useQueryClient();
+
   const { data: userInfo, isLoading: isLoadingUser } = useQuery({
     queryKey: ['user'],
     queryFn: () => apiService.getUserInfo(),
@@ -11,21 +14,49 @@ export const useUser = () => {
     queryKey: ['balance', userInfo?.data?.address],
     queryFn: () => apiService.getBalance(userInfo?.data?.address || ''),
     enabled: !!userInfo?.data?.address,
-    // Agregamos estas opciones para mejorar la experiencia de carga
     retry: 1,
-    staleTime: 30000, // 30 segundos
-    gcTime: 60000,    // 1 minuto (antes era cacheTime)
+    staleTime: 30000,
+    gcTime: 60000,
   });
 
-  // Solo consideramos loading cuando estamos cargando el usuario
-  // No bloqueamos la UI mientras se carga el balance
-  console.log('balanceInfo', balanceInfo);
+  const createWalletMutation = useMutation({
+    mutationFn: () => apiService.createWallet(),
+    onSuccess: () => {
+      // Invalidate queries to refresh user data
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
+    },
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async ({ region, language }: { region: string, language: string }) => {
+      const telegramId = WebApp.initDataUnsafe?.user?.id;
+      if (!telegramId) {
+        throw new Error('No se pudo obtener el ID de Telegram');
+      }
+      return apiService.registerUser({
+        telegramId: telegramId.toString(),
+        region,
+        language
+      });
+    },
+    onSuccess: () => {
+      // Invalidar queries para actualizar los datos del usuario
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
+    },
+  });
+
   return {
     user: userInfo?.data,
-    // Corregimos el acceso a la estructura de datos
-    balance: balanceInfo?.data?.balance || 0, 
+    balance: balanceInfo?.data?.balance || 0,
     hasWallet: userInfo?.data?.hasWallet || false,
     isLoading: isLoadingUser,
     isLoadingBalance,
+    createWallet: createWalletMutation.mutate,
+    isCreatingWallet: createWalletMutation.isPending,
+    register: registerMutation.mutate,
+    isRegistering: registerMutation.isPending,
+    registerError: registerMutation.error
   };
 };

@@ -35,7 +35,6 @@ export interface Listing {
 // Request/Response types
 export interface BuyPackRequest {
   amount?: number;
-  privateKey: string;
 }
 
 export interface CreateListingRequest {
@@ -47,7 +46,6 @@ export interface CreateListingRequest {
 
 export interface RevealPacksRequest {
   amount?: number;
-  privateKey: string;
 }
 
 // API Response wrapper

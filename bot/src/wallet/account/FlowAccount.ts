@@ -12,6 +12,43 @@ export class FlowAccount {
     this.ec = new EC('p256');
   }
 
+  async setupNFTCollection(address: string, privateKey: string, nftContractName: string): Promise<string> {
+    try {
+      const cadence = `
+        import ${nftContractName} from ${flowConfig.venezuelaNFTAddress}
+        import NonFungibleToken from ${flowConfig.nonFungibleToken}
+        import MetadataViews from ${flowConfig.metadataViews}
+  
+        transaction {
+          prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue, UnpublishCapability) &Account) {
+            let collectionData = ${nftContractName}.resolveContractView(resourceType: nil, viewType: Type<MetadataViews.NFTCollectionData>()) as! MetadataViews.NFTCollectionData?
+              ?? panic("ViewResolver does not resolve NFTCollectionData view")
+            
+            if signer.storage.borrow<&${nftContractName}.Collection>(from: collectionData.storagePath) == nil {
+              let collection <- ${nftContractName}.createEmptyCollection(nftType: Type<@${nftContractName}.NFT>())
+              signer.storage.save(<-collection, to: collectionData.storagePath)
+              let oldLink = signer.capabilities.unpublish(collectionData.publicPath)
+              let collectionCap = signer.capabilities.storage.issue<&${nftContractName}.Collection>(collectionData.storagePath)
+              signer.capabilities.publish(collectionCap, at: collectionData.publicPath)
+            }
+          }
+        }
+      `;
+  
+      const transactionId = await flowAuth.executeTransaction({
+        cadence,
+        authOptions: { address, privateKey },
+        limit: 999
+      });
+  
+      return transactionId;
+    } catch (error) {
+      console.error('Error setting up NFT collection:', error);
+      throw new Error('Failed to set up NFT collection');
+    }
+  }
+
+
   async verifyServiceAccount(): Promise<boolean> {
     try {
       const account = await fcl.account(flowConfig.serviceAccount.address);
@@ -106,6 +143,16 @@ export class FlowAccount {
         }
       }
       
+      try {
+        const setupTransactionId = await this.setupNFTCollection(newAddress, privateKey, 'VenezuelaNFT_20');
+        console.log('✅ NFT Collection set up successfully:', setupTransactionId);
+      
+        // Wait for the transaction to be sealed
+        const setupTxResult = await fcl.tx(setupTransactionId).onceSealed();
+        console.log('🔍 Setup transaction result:', setupTxResult);
+      } catch (setupError) {
+        console.error('❌ Error setting up NFT collection:', setupError);
+      }
       return {
         address: newAddress,
         privateKey,
@@ -192,6 +239,7 @@ export class FlowAccount {
       
       const txResult = await fcl.tx(transactionId).onceSealed();
       console.log('🔍 Transaction result:', txResult);
+      
       
       return transactionId;
     } catch (error) {
