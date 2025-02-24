@@ -275,6 +275,15 @@ export const CollectionPage = () => {
     };
 
     container.addEventListener('scroll', handleScroll);
+
+    // Nueva lógica para desplazar al índice correcto al entrar en la vista de detalle
+    if (isDetailView) {
+      container.scrollTo({
+        left: currentIndex * container.offsetWidth,
+        behavior: 'smooth'
+      });
+    }
+
     return () => container.removeEventListener('scroll', handleScroll);
   }, [currentIndex, setCurrentIndex, isDetailView]);
 
