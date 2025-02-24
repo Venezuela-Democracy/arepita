@@ -19,6 +19,8 @@ export interface FlowConfig {
   venezuelaNFTAddress: string;
   nonFungibleToken: string;
   metadataViews: string;
+  fungibleTokenMetadataViews: string;
+  viewResolver: string;
 }
 
 export type TransactionStatus = 'pending' | 'success' | 'error';
